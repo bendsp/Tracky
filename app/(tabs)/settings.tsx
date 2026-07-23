@@ -3,10 +3,15 @@ import {
   Delete02Icon,
 } from '@hugeicons/core-free-icons';
 import { File, Paths } from 'expo-file-system';
-import { useMinimizeOnScroll } from '../../src/components/glass-tabs';
 import * as Sharing from 'expo-sharing';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated from 'react-native-reanimated';
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 import { Icon } from '../../src/components/Icon';
 import { NativeSegmentedPicker } from '../../src/components/NativeControls';
@@ -36,7 +41,6 @@ export default function SettingsScreen() {
     setAppearance,
     theme,
   } = useTracky();
-  const onScroll = useMinimizeOnScroll();
 
   const exportData = async () => {
     try {
@@ -77,10 +81,8 @@ export default function SettingsScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
-      <Animated.ScrollView
+      <ScrollView
         contentContainerStyle={styles.content}
-        onScroll={onScroll}
-        scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
       >
         <ScreenHeader title="Settings" />
@@ -133,7 +135,7 @@ export default function SettingsScreen() {
             </View>
           </View>
         </View>
-      </Animated.ScrollView>
+      </ScrollView>
     </View>
   );
 }

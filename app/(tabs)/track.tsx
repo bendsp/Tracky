@@ -3,16 +3,15 @@ import {
   Chart02Icon,
   Delete02Icon,
 } from '@hugeicons/core-free-icons';
-import { useMinimizeOnScroll } from '../../src/components/glass-tabs';
 import { useState } from 'react';
 import {
   Alert,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import Animated from 'react-native-reanimated';
 
 import { EmptyState } from '../../src/components/EmptyState';
 import { Field, PrimaryButton } from '../../src/components/Form';
@@ -26,7 +25,6 @@ import { useTracky } from '../../src/store/TrackyProvider';
 
 export default function TrackScreen() {
   const { createTracker, events, theme, trackers } = useTracky();
-  const onScroll = useMinimizeOnScroll();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [name, setName] = useState('');
   const [unit, setUnit] = useState('');
@@ -41,10 +39,8 @@ export default function TrackScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
-      <Animated.ScrollView
+      <ScrollView
         contentContainerStyle={styles.content}
-        onScroll={onScroll}
-        scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
       >
         <ScreenHeader
@@ -87,7 +83,7 @@ export default function TrackScreen() {
             </>
           )}
         </View>
-      </Animated.ScrollView>
+      </ScrollView>
 
       <Sheet
         onClose={() => setSheetOpen(false)}
