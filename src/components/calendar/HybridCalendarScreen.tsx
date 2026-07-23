@@ -94,9 +94,15 @@ export function HybridCalendarScreen() {
   const visibleDateIdRef = useRef(toLocalDateId(selectedDate));
   const [now, setNow] = useState(() => new Date());
   const [calendarLoaded, setCalendarLoaded] = useState(false);
+  const [controlHeight, setControlHeight] = useState(0);
   const [editingActivity, setEditingActivity] = useState<ActivityBlock | null>(
     null,
   );
+  const controlTop = insets.top + spacing.xs;
+  const timelineTopInset =
+    controlHeight > 0
+      ? controlTop + controlHeight + spacing.sm
+      : insets.top;
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 60_000);
@@ -420,7 +426,7 @@ export function HybridCalendarScreen() {
         scrollByDay
         scrollToNow={false}
         spaceFromBottom={TAB_BAR_CLEARANCE}
-        spaceFromTop={insets.top}
+        spaceFromTop={timelineTopInset}
         start={0}
         theme={calendarTheme}
         timeInterval={60}
@@ -436,9 +442,15 @@ export function HybridCalendarScreen() {
 
       <View
         pointerEvents="box-none"
-        style={[styles.floatingControls, { top: insets.top + spacing.xs }]}
+        style={[styles.floatingControls, { top: controlTop }]}
       >
         <View
+          onLayout={({ nativeEvent }) => {
+            const nextHeight = Math.ceil(nativeEvent.layout.height);
+            if (nextHeight > 0 && nextHeight !== controlHeight) {
+              setControlHeight(nextHeight);
+            }
+          }}
           style={[
             styles.controlCard,
             {
