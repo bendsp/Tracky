@@ -11,6 +11,7 @@
     "scheme": "tracky",
     "userInterfaceStyle": "automatic",
     "ios": {
+      "icon": "./assets/Tracky.icon",
       "bundleIdentifier": "com.bendsp.tracky",
       "supportsTablet": false
     },
