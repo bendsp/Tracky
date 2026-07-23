@@ -18,14 +18,20 @@ import {
   type AppearanceMode,
   type Theme,
 } from '../design/theme';
-import type {
-  ActivityBlock,
-  ActivityType,
-  HexColor,
-  PersistedTrackyState,
-  Tracker,
-  TrackedEvent,
-  TrackyExport,
+import {
+  trackerIconNames,
+  type ActivityBlock,
+  type ActivityType,
+  type HexColor,
+  type PersistedTrackyState,
+  type TrackedEvent,
+  type Tracker,
+  type TrackerDraft,
+  type TrackerEntryDraft,
+  type TrackerField,
+  type TrackerIconName,
+  type TrackerSummary,
+  type TrackyExport,
 } from '../domain/models';
 
 type TrackyContextValue = PersistedTrackyState & {
@@ -42,14 +48,14 @@ type TrackyContextValue = PersistedTrackyState & {
     startedAt: Date,
     endedAt: Date | null,
   ) => boolean;
-  createTracker: (name: string, unit?: string) => string;
+  createTracker: (draft: TrackerDraft) => string;
+  updateTracker: (trackerId: string, draft: TrackerDraft) => void;
   deleteTracker: (id: string) => void;
-  logEvent: (
-    trackerId: string,
-    value?: number,
-    note?: string,
-    at?: Date,
-  ) => void;
+  reorderTrackers: (orderedIds: string[]) => void;
+  addTrackerChoice: (trackerId: string, fieldId: string, choice: string) => void;
+  logEvent: (trackerId: string, draft: TrackerEntryDraft) => string;
+  updateEvent: (eventId: string, draft: TrackerEntryDraft) => void;
+  deleteEvent: (eventId: string) => void;
   setAppearance: (mode: AppearanceMode) => void;
   retryHydration: () => void;
   retryPersistence: () => void;
@@ -59,15 +65,80 @@ type TrackyContextValue = PersistedTrackyState & {
 
 const STORAGE_KEY = 'tracky.v1';
 
-const initialState: PersistedTrackyState = {
-  activityTypes: [],
-  activities: [],
-  trackers: [],
-  events: [],
-  appearance: 'system',
-};
+function emptyState(appearance: AppearanceMode = 'system'): PersistedTrackyState {
+  return {
+    activityTypes: [],
+    activities: [],
+    trackers: [],
+    events: [],
+    appearance,
+    schemaVersion: 3,
+  };
+}
+
+function id(prefix: string) {
+  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function freshState(): PersistedTrackyState {
+  const timestamp = new Date().toISOString();
+  const drinkingId = id('tracker');
+  const drinkTypeFieldId = id('field');
+  const amountFieldId = id('field');
+  const meditationId = id('tracker');
+  return {
+    ...emptyState(),
+    trackers: [
+      {
+        id: drinkingId,
+        name: 'Drinking',
+        icon: 'droplet',
+        color: '#3578F6',
+        fields: [
+          {
+            id: drinkTypeFieldId,
+            name: 'Drink',
+            type: 'choice',
+            choices: ['Water', 'Coffee', 'Tea'],
+          },
+          {
+            id: amountFieldId,
+            name: 'Amount',
+            type: 'number',
+            unit: 'ml',
+          },
+        ],
+        summary: {
+          calculation: 'sum',
+          timeframe: 'today',
+          fieldId: amountFieldId,
+        },
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      },
+      {
+        id: meditationId,
+        name: 'Meditation',
+        icon: 'meditation',
+        color: '#8A5CC7',
+        fields: [],
+        summary: {
+          calculation: 'count',
+          timeframe: 'thisWeek',
+          countLabel: 'sessions',
+        },
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      },
+    ],
+  };
+}
 
 const TrackyContext = createContext<TrackyContextValue | null>(null);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
 
 function isString(value: unknown): value is string {
   return typeof value === 'string';
@@ -77,26 +148,147 @@ function isHexColor(value: unknown): value is HexColor {
   return isString(value) && /^#[0-9A-Fa-f]{6}$/.test(value);
 }
 
-function readStoredState(value: string): PersistedTrackyState | null {
-  const parsed: unknown = JSON.parse(value);
-  if (!parsed || typeof parsed !== 'object') return null;
-  const candidate = parsed as Partial<PersistedTrackyState>;
+function isTrackerIcon(value: unknown): value is TrackerIconName {
+  return isString(value) && trackerIconNames.includes(value as TrackerIconName);
+}
+
+function readField(value: unknown): TrackerField | null {
   if (
-    !Array.isArray(candidate.activities) ||
-    !Array.isArray(candidate.trackers) ||
-    !Array.isArray(candidate.events)
+    !isRecord(value) ||
+    !isString(value.id) ||
+    !isString(value.name) ||
+    !isString(value.type)
   ) {
     return null;
   }
+  if (value.type === 'choice') {
+    if (!Array.isArray(value.choices) || !value.choices.every(isString)) return null;
+    return {
+      id: value.id,
+      name: value.name,
+      type: 'choice',
+      choices: [...new Set(value.choices.map((choice) => choice.trim()).filter(Boolean))],
+    };
+  }
+  if (value.type === 'number') {
+    if (!(value.unit === null || isString(value.unit))) return null;
+    return {
+      id: value.id,
+      name: value.name,
+      type: 'number',
+      unit: value.unit?.trim() || null,
+    };
+  }
+  if (value.type === 'date') {
+    return { id: value.id, name: value.name, type: 'date' };
+  }
+  return null;
+}
 
-  const appearance: AppearanceMode =
-    candidate.appearance === 'light' || candidate.appearance === 'dark'
-      ? candidate.appearance
-      : 'system';
-  const storedActivityTypes = Array.isArray(candidate.activityTypes)
+function readSummary(
+  value: unknown,
+  fields: TrackerField[],
+): TrackerSummary | null {
+  if (
+    !isRecord(value) ||
+    (value.timeframe !== 'today' && value.timeframe !== 'thisWeek')
+  ) {
+    return null;
+  }
+  if (value.calculation === 'count' && isString(value.countLabel)) {
+    return {
+      calculation: 'count',
+      timeframe: value.timeframe,
+      countLabel: value.countLabel.trim() || 'entries',
+    };
+  }
+  if (
+    value.calculation === 'sum' &&
+    isString(value.fieldId) &&
+    fields.some((field) => field.id === value.fieldId && field.type === 'number')
+  ) {
+    return {
+      calculation: 'sum',
+      timeframe: value.timeframe,
+      fieldId: value.fieldId,
+    };
+  }
+  return null;
+}
+
+function readTracker(value: unknown): Tracker | null {
+  if (
+    !isRecord(value) ||
+    !isString(value.id) ||
+    !isString(value.name) ||
+    !isTrackerIcon(value.icon) ||
+    !isHexColor(value.color) ||
+    !Array.isArray(value.fields) ||
+    !isString(value.createdAt) ||
+    !isString(value.updatedAt)
+  ) {
+    return null;
+  }
+  const fields = value.fields.map(readField);
+  if (fields.some((field) => !field)) return null;
+  const validFields = fields as TrackerField[];
+  if (new Set(validFields.map((field) => field.id)).size !== validFields.length) {
+    return null;
+  }
+  const summary = readSummary(value.summary, validFields);
+  if (!summary) return null;
+  return {
+    id: value.id,
+    name: value.name,
+    icon: value.icon,
+    color: value.color,
+    fields: validFields,
+    summary,
+    createdAt: value.createdAt,
+    updatedAt: value.updatedAt,
+  };
+}
+
+function readEvent(value: unknown, trackerIds: Set<string>): TrackedEvent | null {
+  if (
+    !isRecord(value) ||
+    !isString(value.id) ||
+    !isString(value.trackerId) ||
+    !trackerIds.has(value.trackerId) ||
+    !isString(value.occurredAt) ||
+    !isRecord(value.values) ||
+    !(value.note === null || isString(value.note)) ||
+    !isString(value.createdAt) ||
+    !isString(value.updatedAt)
+  ) {
+    return null;
+  }
+  const values = Object.fromEntries(
+    Object.entries(value.values).filter(
+      ([, fieldValue]) =>
+        fieldValue === null ||
+        isString(fieldValue) ||
+        (typeof fieldValue === 'number' && Number.isFinite(fieldValue)),
+    ),
+  ) as Record<string, string | number | null>;
+  if (Object.keys(values).length !== Object.keys(value.values).length) return null;
+  return {
+    id: value.id,
+    trackerId: value.trackerId,
+    occurredAt: value.occurredAt,
+    values,
+    note: value.note?.trim() || null,
+    createdAt: value.createdAt,
+    updatedAt: value.updatedAt,
+  };
+}
+
+function readActivities(candidate: Record<string, unknown>) {
+  if (!Array.isArray(candidate.activities)) return null;
+  const storedTypes = Array.isArray(candidate.activityTypes)
     ? candidate.activityTypes.filter(
         (item): item is ActivityType =>
-          !!item &&
+          isRecord(item) &&
           isString(item.id) &&
           isString(item.name) &&
           isHexColor(item.color) &&
@@ -106,15 +298,15 @@ function readStoredState(value: string): PersistedTrackyState | null {
     : [];
   if (
     Array.isArray(candidate.activityTypes) &&
-    storedActivityTypes.length !== candidate.activityTypes.length
+    storedTypes.length !== candidate.activityTypes.length
   ) {
     return null;
   }
-  const activityTypes = [...storedActivityTypes];
+  const activityTypes = [...storedTypes];
   const activities: ActivityBlock[] = [];
   for (const item of candidate.activities) {
     if (
-      !item ||
+      !isRecord(item) ||
       !isString(item.id) ||
       !isString(item.name) ||
       !isString(item.startedAt) ||
@@ -124,30 +316,23 @@ function readStoredState(value: string): PersistedTrackyState | null {
     ) {
       return null;
     }
-
-    const storedTypeId =
-      'activityTypeId' in item && isString(item.activityTypeId)
-        ? item.activityTypeId
-        : null;
+    const storedTypeId = isString(item.activityTypeId) ? item.activityTypeId : null;
+    const itemName = item.name;
     let activityType =
       activityTypes.find((type) => type.id === storedTypeId) ??
       activityTypes.find(
-        (type) => type.name.toLocaleLowerCase() === item.name.toLocaleLowerCase(),
+        (type) => type.name.toLocaleLowerCase() === itemName.toLocaleLowerCase(),
       );
     if (!activityType) {
       activityType = {
         id: `activity_type_migrated_${item.id}`,
-        name: item.name,
-        color:
-          'color' in item && isHexColor(item.color)
-            ? item.color
-            : accent.primary,
+        name: itemName,
+        color: isHexColor(item.color) ? item.color : accent.primary,
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
       };
       activityTypes.push(activityType);
     }
-
     activities.push({
       id: item.id,
       activityTypeId: activityType.id,
@@ -159,42 +344,154 @@ function readStoredState(value: string): PersistedTrackyState | null {
       updatedAt: item.updatedAt,
     });
   }
-  const trackers = candidate.trackers.filter(
-    (item): item is Tracker =>
-      !!item &&
-      isString(item.id) &&
-      isString(item.name) &&
-      (item.unit === null || isString(item.unit)) &&
-      isString(item.createdAt) &&
-      isString(item.updatedAt),
-  );
-  if (trackers.length !== candidate.trackers.length) return null;
-  const trackerIds = new Set(trackers.map((tracker) => tracker.id));
-  const events = candidate.events.filter(
-    (item): item is TrackedEvent =>
-      !!item &&
-      isString(item.id) &&
-      isString(item.trackerId) &&
-      trackerIds.has(item.trackerId) &&
-      isString(item.occurredAt) &&
-      (item.numericValue === null || typeof item.numericValue === 'number') &&
-      (item.unit === null || isString(item.unit)) &&
-      (item.note === null || isString(item.note)) &&
-      isString(item.createdAt) &&
-      isString(item.updatedAt),
-  );
-  if (events.length !== candidate.events.length) return null;
-
-  return { activityTypes, activities, trackers, events, appearance };
+  return { activities, activityTypes };
 }
 
-function id(prefix: string) {
-  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+function appearanceFrom(candidate: Record<string, unknown>): AppearanceMode {
+  return candidate.appearance === 'light' || candidate.appearance === 'dark'
+    ? candidate.appearance
+    : 'system';
+}
+
+function readVersionThree(
+  candidate: Record<string, unknown>,
+  activityData: { activities: ActivityBlock[]; activityTypes: ActivityType[] },
+): PersistedTrackyState | null {
+  if (!Array.isArray(candidate.trackers) || !Array.isArray(candidate.events)) {
+    return null;
+  }
+  const trackers = candidate.trackers.map(readTracker);
+  if (trackers.some((tracker) => !tracker)) return null;
+  const validTrackers = trackers as Tracker[];
+  const trackerIds = new Set(validTrackers.map((tracker) => tracker.id));
+  const events = candidate.events.map((event) => readEvent(event, trackerIds));
+  if (events.some((event) => !event)) return null;
+  return {
+    ...activityData,
+    trackers: validTrackers,
+    events: events as TrackedEvent[],
+    appearance: appearanceFrom(candidate),
+    schemaVersion: 3,
+  };
+}
+
+function migrateLegacy(
+  candidate: Record<string, unknown>,
+  activityData: { activities: ActivityBlock[]; activityTypes: ActivityType[] },
+): PersistedTrackyState | null {
+  if (!Array.isArray(candidate.trackers) || !Array.isArray(candidate.events)) {
+    return null;
+  }
+  const legacyEvents = candidate.events.filter(isRecord);
+  if (legacyEvents.length !== candidate.events.length) return null;
+  const trackers: Tracker[] = [];
+  const numberFields = new Map<string, string>();
+  for (const raw of candidate.trackers) {
+    if (
+      !isRecord(raw) ||
+      !isString(raw.id) ||
+      !isString(raw.name) ||
+      !(raw.unit === null || isString(raw.unit)) ||
+      !isString(raw.createdAt) ||
+      !isString(raw.updatedAt)
+    ) {
+      return null;
+    }
+    const hasNumericEvent = legacyEvents.some(
+      (event) =>
+        event.trackerId === raw.id &&
+        typeof event.numericValue === 'number' &&
+        Number.isFinite(event.numericValue),
+    );
+    const fieldId = `field_migrated_${raw.id}`;
+    const fields: TrackerField[] =
+      raw.unit || hasNumericEvent
+        ? [
+            {
+              id: fieldId,
+              name: 'Amount',
+              type: 'number',
+              unit: raw.unit?.trim() || null,
+            },
+          ]
+        : [];
+    if (fields.length) numberFields.set(raw.id, fieldId);
+    trackers.push({
+      id: raw.id,
+      name: raw.name,
+      icon: 'activity',
+      color: accent.primary,
+      fields,
+      summary: fields.length
+        ? { calculation: 'sum', timeframe: 'today', fieldId }
+        : { calculation: 'count', timeframe: 'today', countLabel: 'entries' },
+      createdAt: raw.createdAt,
+      updatedAt: raw.updatedAt,
+    });
+  }
+  const trackerIds = new Set(trackers.map((tracker) => tracker.id));
+  const events: TrackedEvent[] = [];
+  for (const raw of legacyEvents) {
+    if (
+      !isString(raw.id) ||
+      !isString(raw.trackerId) ||
+      !trackerIds.has(raw.trackerId) ||
+      !isString(raw.occurredAt) ||
+      !(raw.numericValue === null ||
+        (typeof raw.numericValue === 'number' && Number.isFinite(raw.numericValue))) ||
+      !(raw.note === null || isString(raw.note)) ||
+      !isString(raw.createdAt) ||
+      !isString(raw.updatedAt)
+    ) {
+      return null;
+    }
+    const fieldId = numberFields.get(raw.trackerId);
+    events.push({
+      id: raw.id,
+      trackerId: raw.trackerId,
+      occurredAt: raw.occurredAt,
+      values:
+        fieldId && typeof raw.numericValue === 'number'
+          ? { [fieldId]: raw.numericValue }
+          : {},
+      note: raw.note?.trim() || null,
+      createdAt: raw.createdAt,
+      updatedAt: raw.updatedAt,
+    });
+  }
+  return {
+    ...activityData,
+    trackers,
+    events,
+    appearance: appearanceFrom(candidate),
+    schemaVersion: 3,
+  };
+}
+
+function readStoredState(value: string): PersistedTrackyState | null {
+  const parsed: unknown = JSON.parse(value);
+  if (!isRecord(parsed)) return null;
+  const activityData = readActivities(parsed);
+  if (!activityData) return null;
+  return parsed.schemaVersion === 3
+    ? readVersionThree(parsed, activityData)
+    : migrateLegacy(parsed, activityData);
+}
+
+function sanitizedDraft(draft: TrackerDraft): TrackerDraft | null {
+  const name = draft.name.trim();
+  if (!name || !isTrackerIcon(draft.icon) || !isHexColor(draft.color)) return null;
+  const fields = draft.fields.map(readField);
+  if (fields.some((field) => !field)) return null;
+  const validFields = fields as TrackerField[];
+  const summary = readSummary(draft.summary, validFields);
+  if (!summary) return null;
+  return { name, icon: draft.icon, color: draft.color, fields: validFields, summary };
 }
 
 export function TrackyProvider({ children }: PropsWithChildren) {
   const systemScheme = useColorScheme();
-  const [state, setState] = useState<PersistedTrackyState>(initialState);
+  const [state, setState] = useState<PersistedTrackyState>(emptyState());
   const [hydrated, setHydrated] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [storageReady, setStorageReady] = useState(false);
@@ -216,6 +513,8 @@ export function TrackyProvider({ children }: PropsWithChildren) {
           return;
         }
         setState(parsed);
+      } else {
+        setState(freshState());
       }
       setStorageReady(true);
     } catch {
@@ -267,38 +566,35 @@ export function TrackyProvider({ children }: PropsWithChildren) {
   const currentActivity =
     state.activities.find((activity) => activity.endedAt === null) ?? null;
 
-  const switchActivity = useCallback(
-    (activityTypeId: string, at = new Date()) => {
-      const timestamp = at.toISOString();
-      setState((previous) => {
-        const activityType = previous.activityTypes.find(
-          (item) => item.id === activityTypeId,
-        );
-        if (!activityType) return previous;
-        return {
-          ...previous,
-          activities: [
-            ...previous.activities.map((activity) =>
-              activity.endedAt === null
-                ? { ...activity, endedAt: timestamp, updatedAt: timestamp }
-                : activity,
-            ),
-            {
-              id: id('activity'),
-              activityTypeId: activityType.id,
-              name: activityType.name,
-              color: activityType.color,
-              startedAt: timestamp,
-              endedAt: null,
-              createdAt: timestamp,
-              updatedAt: timestamp,
-            },
-          ],
-        };
-      });
-    },
-    [],
-  );
+  const switchActivity = useCallback((activityTypeId: string, at = new Date()) => {
+    const timestamp = at.toISOString();
+    setState((previous) => {
+      const activityType = previous.activityTypes.find(
+        (item) => item.id === activityTypeId,
+      );
+      if (!activityType) return previous;
+      return {
+        ...previous,
+        activities: [
+          ...previous.activities.map((activity) =>
+            activity.endedAt === null
+              ? { ...activity, endedAt: timestamp, updatedAt: timestamp }
+              : activity,
+          ),
+          {
+            id: id('activity'),
+            activityTypeId: activityType.id,
+            name: activityType.name,
+            color: activityType.color,
+            startedAt: timestamp,
+            endedAt: null,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          },
+        ],
+      };
+    });
+  }, []);
 
   const createActivityAndSwitch = useCallback(
     (name: string, color: string, at = new Date()) => {
@@ -358,8 +654,7 @@ export function TrackyProvider({ children }: PropsWithChildren) {
       if (
         !Number.isFinite(startedAt.getTime()) ||
         (!endedAt && startedAt > new Date()) ||
-        (endedAt &&
-          (!Number.isFinite(endedAt.getTime()) || endedAt <= startedAt))
+        (endedAt && (!Number.isFinite(endedAt.getTime()) || endedAt <= startedAt))
       ) {
         return false;
       }
@@ -368,35 +663,37 @@ export function TrackyProvider({ children }: PropsWithChildren) {
       }
       const proposedStart = startedAt.getTime();
       const proposedEnd = endedAt?.getTime() ?? Number.POSITIVE_INFINITY;
-      const overlapsAnotherActivity = state.activities.some((activity) => {
+      const overlaps = state.activities.some((activity) => {
         if (activity.id === activityId) return false;
         const otherStart = new Date(activity.startedAt).getTime();
         const otherEnd = activity.endedAt
           ? new Date(activity.endedAt).getTime()
           : Number.POSITIVE_INFINITY;
-        if (!Number.isFinite(otherStart) || Number.isNaN(otherEnd)) return false;
         return proposedStart < otherEnd && proposedEnd > otherStart;
       });
-      if (overlapsAnotherActivity) return false;
+      if (overlaps) return false;
       const timestamp = new Date().toISOString();
       setState((previous) => ({
         ...previous,
-        activities: previous.activities.map((activity) => {
-          if (activity.id !== activityId) return activity;
-          return {
-            ...activity,
-            startedAt: startedAt.toISOString(),
-            endedAt: endedAt?.toISOString() ?? null,
-            updatedAt: timestamp,
-          };
-        }),
+        activities: previous.activities.map((activity) =>
+          activity.id === activityId
+            ? {
+                ...activity,
+                startedAt: startedAt.toISOString(),
+                endedAt: endedAt?.toISOString() ?? null,
+                updatedAt: timestamp,
+              }
+            : activity,
+        ),
       }));
       return true;
     },
     [state.activities],
   );
 
-  const createTracker = useCallback((name: string, unit?: string) => {
+  const createTracker = useCallback((draft: TrackerDraft) => {
+    const clean = sanitizedDraft(draft);
+    if (!clean) return '';
     const trackerId = id('tracker');
     const timestamp = new Date().toISOString();
     setState((previous) => ({
@@ -405,14 +702,27 @@ export function TrackyProvider({ children }: PropsWithChildren) {
         ...previous.trackers,
         {
           id: trackerId,
-          name: name.trim(),
-          unit: unit?.trim() || null,
+          ...clean,
           createdAt: timestamp,
           updatedAt: timestamp,
         },
       ],
     }));
     return trackerId;
+  }, []);
+
+  const updateTracker = useCallback((trackerId: string, draft: TrackerDraft) => {
+    const clean = sanitizedDraft(draft);
+    if (!clean) return;
+    const timestamp = new Date().toISOString();
+    setState((previous) => ({
+      ...previous,
+      trackers: previous.trackers.map((tracker) =>
+        tracker.id === trackerId
+          ? { ...tracker, ...clean, updatedAt: timestamp }
+          : tracker,
+      ),
+    }));
   }, []);
 
   const deleteTracker = useCallback((trackerId: string) => {
@@ -423,37 +733,105 @@ export function TrackyProvider({ children }: PropsWithChildren) {
     }));
   }, []);
 
-  const logEvent = useCallback(
-    (
-      trackerId: string,
-      value?: number,
-      note?: string,
-      at = new Date(),
-    ) => {
-      setState((previous) => {
-        const tracker = previous.trackers.find((item) => item.id === trackerId);
-        if (!tracker) return previous;
-        const timestamp = at.toISOString();
-        return {
-          ...previous,
-          events: [
-            ...previous.events,
-            {
-              id: id('event'),
-              trackerId,
-              occurredAt: timestamp,
-              numericValue: Number.isFinite(value) ? (value ?? null) : null,
-              unit: tracker.unit,
-              note: note?.trim() || null,
-              createdAt: timestamp,
-              updatedAt: timestamp,
-            },
-          ],
-        };
-      });
+  const reorderTrackers = useCallback((orderedIds: string[]) => {
+    setState((previous) => {
+      if (
+        orderedIds.length !== previous.trackers.length ||
+        new Set(orderedIds).size !== orderedIds.length
+      ) {
+        return previous;
+      }
+      const trackersById = new Map(
+        previous.trackers.map((tracker) => [tracker.id, tracker] as const),
+      );
+      const ordered = orderedIds.map((trackerId) => trackersById.get(trackerId));
+      if (ordered.some((tracker) => !tracker)) return previous;
+      return { ...previous, trackers: ordered as Tracker[] };
+    });
+  }, []);
+
+  const addTrackerChoice = useCallback(
+    (trackerId: string, fieldId: string, choice: string) => {
+      const cleanChoice = choice.trim();
+      if (!cleanChoice) return;
+      const timestamp = new Date().toISOString();
+      setState((previous) => ({
+        ...previous,
+        trackers: previous.trackers.map((tracker) => {
+          if (tracker.id !== trackerId) return tracker;
+          return {
+            ...tracker,
+            updatedAt: timestamp,
+            fields: tracker.fields.map((field) => {
+              if (field.id !== fieldId || field.type !== 'choice') return field;
+              const existing = field.choices.find(
+                (candidate) =>
+                  candidate.toLocaleLowerCase() === cleanChoice.toLocaleLowerCase(),
+              );
+              return existing
+                ? field
+                : { ...field, choices: [...field.choices, cleanChoice] };
+            }),
+          };
+        }),
+      }));
     },
     [],
   );
+
+  const logEvent = useCallback(
+    (trackerId: string, draft: TrackerEntryDraft) => {
+      const tracker = state.trackers.find((item) => item.id === trackerId);
+      if (!tracker || !Number.isFinite(new Date(draft.occurredAt).getTime())) {
+        return '';
+      }
+      const eventId = id('event');
+      const timestamp = new Date().toISOString();
+      setState((previous) => ({
+        ...previous,
+        events: [
+          ...previous.events,
+          {
+            id: eventId,
+            trackerId,
+            occurredAt: draft.occurredAt,
+            values: draft.values,
+            note: draft.note?.trim() || null,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          },
+        ],
+      }));
+      return eventId;
+    },
+    [state.trackers],
+  );
+
+  const updateEvent = useCallback((eventId: string, draft: TrackerEntryDraft) => {
+    if (!Number.isFinite(new Date(draft.occurredAt).getTime())) return;
+    const timestamp = new Date().toISOString();
+    setState((previous) => ({
+      ...previous,
+      events: previous.events.map((event) =>
+        event.id === eventId
+          ? {
+              ...event,
+              occurredAt: draft.occurredAt,
+              values: draft.values,
+              note: draft.note?.trim() || null,
+              updatedAt: timestamp,
+            }
+          : event,
+      ),
+    }));
+  }, []);
+
+  const deleteEvent = useCallback((eventId: string) => {
+    setState((previous) => ({
+      ...previous,
+      events: previous.events.filter((event) => event.id !== eventId),
+    }));
+  }, []);
 
   const setAppearance = useCallback((appearance: AppearanceMode) => {
     setState((previous) => ({ ...previous, appearance }));
@@ -468,7 +846,7 @@ export function TrackyProvider({ children }: PropsWithChildren) {
   }, [hydrate]);
 
   const deleteAll = useCallback(async () => {
-    const clearedState = { ...initialState, appearance: state.appearance };
+    const clearedState = emptyState(state.appearance);
     setState(clearedState);
     await persist(clearedState);
   }, [persist, state.appearance]);
@@ -476,7 +854,6 @@ export function TrackyProvider({ children }: PropsWithChildren) {
   const exportSnapshot = useCallback(
     () => ({
       ...state,
-      schemaVersion: 2 as const,
       exportedAt: new Date().toISOString(),
     }),
     [state],
@@ -500,8 +877,13 @@ export function TrackyProvider({ children }: PropsWithChildren) {
       stopCurrentActivity,
       updateActivityTimes,
       createTracker,
+      updateTracker,
       deleteTracker,
+      reorderTrackers,
+      addTrackerChoice,
       logEvent,
+      updateEvent,
+      deleteEvent,
       setAppearance,
       retryHydration,
       retryPersistence,
@@ -520,8 +902,13 @@ export function TrackyProvider({ children }: PropsWithChildren) {
       stopCurrentActivity,
       updateActivityTimes,
       createTracker,
+      updateTracker,
       deleteTracker,
+      reorderTrackers,
+      addTrackerChoice,
       logEvent,
+      updateEvent,
+      deleteEvent,
       setAppearance,
       retryHydration,
       retryPersistence,

@@ -26,6 +26,7 @@ import { GlassButton } from './GlassButton';
 import { Icon } from './Icon';
 import { NativeColorPicker } from './NativeControls';
 import { Sheet } from './Sheet';
+import { TrackerEntryForm } from './tracking/TrackerEntryForm';
 
 type AddMode = 'activityPicker' | 'newActivity' | 'event' | null;
 
@@ -51,9 +52,6 @@ export function UniversalAdd() {
   const [selectedTrackerId, setSelectedTrackerId] = useState<string | null>(
     trackers[0]?.id ?? null,
   );
-  const [amount, setAmount] = useState('');
-  const [amountError, setAmountError] = useState<string | null>(null);
-  const [note, setNote] = useState('');
 
   useEffect(() => {
     if (!trackers.some((tracker) => tracker.id === selectedTrackerId)) {
@@ -114,22 +112,8 @@ export function UniversalAdd() {
     if (createdActivityTypeId) closeActivitySheet();
   };
 
-  const submitEvent = () => {
-    if (!selectedTrackerId) return;
-    const enteredAmount = amount.trim();
-    const numericAmount = enteredAmount
-      ? Number(enteredAmount.replace(',', '.'))
-      : undefined;
-    if (enteredAmount && !Number.isFinite(numericAmount)) {
-      setAmountError('Enter a valid number or leave the amount blank.');
-      return;
-    }
-    logEvent(selectedTrackerId, numericAmount, note);
-    setAmount('');
-    setAmountError(null);
-    setNote('');
-    setAddMode(null);
-  };
+  const selectedTracker =
+    trackers.find((tracker) => tracker.id === selectedTrackerId) ?? null;
 
   return (
     <>
@@ -376,15 +360,17 @@ export function UniversalAdd() {
       </Sheet>
 
       <Sheet
-        onClose={() => {
-          setAddMode(null);
-          setAmountError(null);
-        }}
-        title="Log an event"
+        onClose={() => setAddMode(null)}
+        title={selectedTracker ? `Log ${selectedTracker.name}` : 'Log an event'}
         visible={addMode === 'event'}
       >
         {trackers.length ? (
-          <>
+          <ScrollView
+            contentContainerStyle={styles.eventForm}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            style={styles.eventViewport}
+          >
             <View style={styles.trackerChoices}>
               {trackers.map((tracker) => (
                 <ChoiceChip
@@ -395,40 +381,18 @@ export function UniversalAdd() {
                 />
               ))}
             </View>
-            <Field
-              keyboardType="decimal-pad"
-              label="Amount (optional)"
-              onChangeText={(value) => {
-                setAmount(value);
-                setAmountError(null);
-              }}
-              placeholder={
-                trackers.find((tracker) => tracker.id === selectedTrackerId)?.unit ??
-                'Number'
-              }
-              value={amount}
-            />
-            {amountError ? (
-              <Text
-                accessibilityRole="alert"
-                style={[typography.caption, { color: theme.colors.danger }]}
-              >
-                {amountError}
-              </Text>
+            {selectedTracker ? (
+              <TrackerEntryForm
+                key={selectedTracker.id}
+                onSubmit={(draft) => {
+                  logEvent(selectedTracker.id, draft);
+                  setAddMode(null);
+                }}
+                submitLabel="Log entry"
+                tracker={selectedTracker}
+              />
             ) : null}
-            <Field
-              label="Note (optional)"
-              multiline
-              onChangeText={setNote}
-              placeholder="Anything worth remembering"
-              value={note}
-            />
-            <PrimaryButton
-              disabled={!selectedTrackerId}
-              label="Log now"
-              onPress={submitEvent}
-            />
-          </>
+          </ScrollView>
         ) : (
           <>
             <EmptyState icon={NoteEditIcon} title="No trackers yet" />
@@ -472,6 +436,8 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.xs,
   },
+  eventViewport: { maxHeight: 640 },
+  eventForm: { gap: spacing.lg, paddingBottom: spacing.lg },
   activityListViewport: { maxHeight: 312 },
   activityList: { gap: spacing.xs },
   activityOption: {

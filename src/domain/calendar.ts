@@ -5,6 +5,7 @@ import type {
   TrackedEvent,
   Tracker,
 } from './models';
+import { eventDetail } from './tracking';
 
 export type CalendarActivityZone = {
   id: EntityId;
@@ -108,20 +109,13 @@ export function buildCalendarDay({
       ) {
         return [];
       }
-      const detailParts = [
-        event.numericValue !== null
-          ? `${event.numericValue}${event.unit ? ` ${event.unit}` : ''}`
-          : null,
-        event.note,
-      ].filter((value): value is string => !!value);
-
       return [
         {
           id: event.id,
           event,
           tracker,
           title: tracker.name,
-          detail: detailParts.length ? detailParts.join(' · ') : null,
+          detail: eventDetail(tracker, event),
           occursAt,
         },
       ];

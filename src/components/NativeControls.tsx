@@ -79,6 +79,35 @@ export function NativeTimePicker({
   );
 }
 
+export function NativeDatePicker({
+  label,
+  onChange,
+  value,
+}: {
+  label: string;
+  onChange: (value: Date) => void;
+  value: Date;
+}) {
+  const { theme } = useTracky();
+
+  return (
+    <Host
+      colorScheme={theme.scheme}
+      matchContents={{ vertical: true }}
+      seedColor={theme.colors.accent}
+      style={styles.fullWidth}
+    >
+      <DatePicker
+        displayedComponents={['date']}
+        modifiers={[datePickerStyle('compact')]}
+        onDateChange={onChange}
+        selection={value}
+        title={label}
+      />
+    </Host>
+  );
+}
+
 export function NativeColorPicker({
   label,
   onChange,

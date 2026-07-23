@@ -24,18 +24,75 @@ export type ActivityBlock = EntityTimestamps & {
   endedAt: ISODateTime | null;
 };
 
+export const trackerIconNames = [
+  'droplet',
+  'meditation',
+  'coffee',
+  'activity',
+  'heart',
+  'book',
+  'leaf',
+  'star',
+] as const;
+
+export type TrackerIconName = (typeof trackerIconNames)[number];
+export type TrackerFieldType = 'choice' | 'number' | 'date';
+
+export type TrackerChoiceField = {
+  id: EntityId;
+  name: string;
+  type: 'choice';
+  choices: string[];
+};
+
+export type TrackerNumberField = {
+  id: EntityId;
+  name: string;
+  type: 'number';
+  unit: string | null;
+};
+
+export type TrackerDateField = {
+  id: EntityId;
+  name: string;
+  type: 'date';
+};
+
+export type TrackerField =
+  | TrackerChoiceField
+  | TrackerNumberField
+  | TrackerDateField;
+
+export type TrackerSummaryTimeframe = 'today' | 'thisWeek';
+
+export type TrackerSummary =
+  | {
+      calculation: 'count';
+      timeframe: TrackerSummaryTimeframe;
+      countLabel: string;
+    }
+  | {
+      calculation: 'sum';
+      timeframe: TrackerSummaryTimeframe;
+      fieldId: EntityId;
+    };
+
 export type Tracker = EntityTimestamps & {
   id: EntityId;
   name: string;
-  unit: string | null;
+  icon: TrackerIconName;
+  color: HexColor;
+  fields: TrackerField[];
+  summary: TrackerSummary;
 };
+
+export type TrackerEntryValue = string | number | null;
 
 export type TrackedEvent = EntityTimestamps & {
   id: EntityId;
   trackerId: EntityId;
   occurredAt: ISODateTime;
-  numericValue: number | null;
-  unit: string | null;
+  values: Record<EntityId, TrackerEntryValue>;
   note: string | null;
 };
 
@@ -48,9 +105,19 @@ export type TrackyData = {
 
 export type PersistedTrackyState = TrackyData & {
   appearance: AppearanceMode;
+  schemaVersion: 3;
 };
 
 export type TrackyExport = PersistedTrackyState & {
   exportedAt: ISODateTime;
-  schemaVersion: 2;
 };
+
+export type TrackerDraft = Pick<
+  Tracker,
+  'name' | 'icon' | 'color' | 'fields' | 'summary'
+>;
+
+export type TrackerEntryDraft = Pick<
+  TrackedEvent,
+  'occurredAt' | 'values' | 'note'
+>;
