@@ -21,14 +21,18 @@ import { buildCalendarDay } from '../../domain/calendar';
 import type { ActivityBlock, HexColor } from '../../domain/models';
 import {
   colorWithAlpha,
+  radius,
   spacing,
 } from '../../design/theme';
 import { useTracky } from '../../store/TrackyProvider';
 import { ActivityEditorSheet } from './ActivityEditorSheet';
 import { useCalendarSelection } from './CalendarSelectionProvider';
+import {
+  fromCalendarDate,
+  toLocalDateId,
+} from './dateUtils';
 import { WixCalendarControl } from './WixCalendarControl';
 
-const HEADER_BODY_HEIGHT = 176;
 const TAB_BAR_CLEARANCE = 150;
 
 type ActivityTimelineEvent = EventItem & {
@@ -55,13 +59,6 @@ type MarkerTimelineEvent = EventItem & {
 };
 
 type TrackyTimelineEvent = ActivityTimelineEvent | MarkerTimelineEvent;
-
-function formatDateTitle(date: Date) {
-  return new Intl.DateTimeFormat(undefined, {
-    day: 'numeric',
-    month: 'long',
-  }).format(date);
-}
 
 function formatDuration(startsAt: Date, endsAt: Date) {
   const minutes = Math.max(
@@ -94,12 +91,12 @@ export function HybridCalendarScreen() {
   const insets = useSafeAreaInsets();
   const calendarRef = useRef<CalendarKitHandle>(null);
   const lastFocusedDateRef = useRef<number | null>(null);
+  const visibleDateIdRef = useRef(toLocalDateId(selectedDate));
   const [now, setNow] = useState(() => new Date());
   const [calendarLoaded, setCalendarLoaded] = useState(false);
   const [editingActivity, setEditingActivity] = useState<ActivityBlock | null>(
     null,
   );
-  const headerHeight = insets.top + HEADER_BODY_HEIGHT;
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 60_000);
@@ -234,15 +231,19 @@ export function HybridCalendarScreen() {
     const selectedTimestamp = selectedDate.getTime();
     if (lastFocusedDateRef.current === selectedTimestamp) return;
     lastFocusedDateRef.current = selectedTimestamp;
+    const dateIsAlreadyVisible =
+      visibleDateIdRef.current === toLocalDateId(selectedDate);
     let hourTimer: ReturnType<typeof setTimeout> | undefined;
     const timer = setTimeout(() => {
-      calendarRef.current?.goToDate({
-        animatedDate: true,
-        date: selectedDate,
-      });
+      if (!dateIsAlreadyVisible) {
+        calendarRef.current?.goToDate({
+          animatedDate: true,
+          date: selectedDate,
+        });
+      }
       hourTimer = setTimeout(() => {
         calendarRef.current?.goToHour(focusHour, true);
-      }, 100);
+      }, dateIsAlreadyVisible ? 0 : 100);
     }, 220);
     return () => {
       clearTimeout(timer);
@@ -355,6 +356,18 @@ export function HybridCalendarScreen() {
     [activities],
   );
 
+  const handleCalendarDateChanged = useCallback(
+    (value: string) => {
+      const nextDate = fromCalendarDate(value);
+      if (!nextDate) return;
+
+      visibleDateIdRef.current = toLocalDateId(nextDate);
+      if (isSameLocalDay(nextDate, selectedDate)) return;
+      setSelectedDate(nextDate);
+    },
+    [selectedDate, setSelectedDate],
+  );
+
   const calendarTheme = useMemo(
     () => ({
       colors: {
@@ -387,7 +400,7 @@ export function HybridCalendarScreen() {
       <CalendarContainer
         allowDragToCreate={false}
         allowDragToEdit={false}
-        allowHorizontalSwipe={false}
+        allowHorizontalSwipe
         allowPinchToZoom={false}
         end={24 * 60}
         events={timelineEvents}
@@ -398,14 +411,16 @@ export function HybridCalendarScreen() {
         minRegularEventMinutes={0}
         minTimeIntervalHeight={68}
         numberOfDays={1}
+        onDateChanged={handleCalendarDateChanged}
         onLoad={() => setCalendarLoaded(true)}
         onPressEvent={handlePressEvent}
         overlapType="no-overlap"
         ref={calendarRef}
         rightEdgeSpacing={12}
+        scrollByDay
         scrollToNow={false}
         spaceFromBottom={TAB_BAR_CLEARANCE}
-        spaceFromTop={headerHeight}
+        spaceFromTop={insets.top}
         start={0}
         theme={calendarTheme}
         timeInterval={60}
@@ -421,30 +436,38 @@ export function HybridCalendarScreen() {
 
       <View
         pointerEvents="box-none"
-        style={[styles.floatingHeader, { height: headerHeight }]}
+        style={[styles.floatingControls, { top: insets.top + spacing.xs }]}
       >
-        <BlurView
-          intensity={72}
-          pointerEvents="none"
-          style={StyleSheet.absoluteFill}
-          tint={theme.dark ? 'dark' : 'light'}
-        />
         <View
-          pointerEvents="none"
           style={[
-            StyleSheet.absoluteFill,
+            styles.controlCard,
             {
-              backgroundColor: colorWithAlpha(
-                theme.colors.background,
-                theme.dark ? 0.5 : 0.62,
+              borderColor: colorWithAlpha(
+                theme.colors.text,
+                theme.dark ? 0.14 : 0.1,
               ),
+              shadowColor: theme.dark ? '#000000' : '#64645F',
             },
           ]}
-        />
-        <View style={[styles.headerContent, { paddingTop: insets.top + 4 }]}>
-          <Text style={[styles.dateTitle, { color: theme.colors.text }]}>
-            {formatDateTitle(selectedDate)}
-          </Text>
+        >
+          <BlurView
+            intensity={78}
+            pointerEvents="none"
+            style={StyleSheet.absoluteFill}
+            tint={theme.dark ? 'dark' : 'light'}
+          />
+          <View
+            pointerEvents="none"
+            style={[
+              StyleSheet.absoluteFill,
+              {
+                backgroundColor: colorWithAlpha(
+                  theme.colors.background,
+                  theme.dark ? 0.42 : 0.54,
+                ),
+              },
+            ]}
+          />
           <WixCalendarControl
             activities={activities}
             embedded
@@ -454,13 +477,6 @@ export function HybridCalendarScreen() {
             selectedDate={selectedDate}
           />
         </View>
-        <View
-          pointerEvents="none"
-          style={[
-            styles.headerHairline,
-            { backgroundColor: colorWithAlpha(theme.colors.text, 0.08) },
-          ]}
-        />
       </View>
 
       <ActivityEditorSheet
@@ -473,30 +489,21 @@ export function HybridCalendarScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  floatingHeader: {
-    left: 0,
-    overflow: 'hidden',
+  floatingControls: {
+    left: spacing.md,
     position: 'absolute',
-    right: 0,
-    top: 0,
+    right: spacing.md,
     zIndex: 20,
   },
-  headerContent: {
-    flex: 1,
-    paddingHorizontal: spacing.lg,
-  },
-  dateTitle: {
-    fontSize: 32,
-    fontWeight: '700',
-    letterSpacing: -1.1,
-    marginBottom: spacing.xxs,
-  },
-  headerHairline: {
-    bottom: 0,
-    height: StyleSheet.hairlineWidth,
-    left: 0,
-    position: 'absolute',
-    right: 0,
+  controlCard: {
+    borderCurve: 'continuous',
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    elevation: 8,
+    overflow: 'hidden',
+    shadowOffset: { height: 8, width: 0 },
+    shadowOpacity: 0.18,
+    shadowRadius: 22,
   },
   activityZone: {
     borderLeftWidth: 3,
