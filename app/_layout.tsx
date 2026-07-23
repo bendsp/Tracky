@@ -39,8 +39,7 @@ function RootNavigator() {
             { color: theme.colors.textSecondary },
           ]}
         >
-          Your stored data has not been changed. Try reading it again before
-          continuing.
+          {loadError}
         </Text>
         <Pressable
           accessibilityRole="button"

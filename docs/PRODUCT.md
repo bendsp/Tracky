@@ -67,6 +67,7 @@ Manage user-defined event types and browse their histories. A tracker contains:
 ### Settings
 
 - export data;
+- restore a Tracky backup;
 - delete all data;
 - appearance and time format;
 - later: backup/sync and integrations.

@@ -108,8 +108,25 @@ export type PersistedTrackyState = TrackyData & {
   schemaVersion: 3;
 };
 
-export type TrackyExport = PersistedTrackyState & {
+export type TrackyBackupEnvelope = {
+  format: 'tracky-backup';
+  formatVersion: 1;
+  dataSchemaVersion: 3;
+  appVersion: string;
   exportedAt: ISODateTime;
+  payload: PersistedTrackyState;
+};
+
+export type TrackyBackupPreview = {
+  appVersion: string | null;
+  exportedAt: ISODateTime | null;
+  trackerCount: number;
+  entryCount: number;
+  activityCount: number;
+  dateRange: {
+    start: ISODateTime;
+    end: ISODateTime;
+  } | null;
 };
 
 export type TrackerDraft = Pick<

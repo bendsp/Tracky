@@ -1,7 +1,9 @@
 import {
   DatabaseExportIcon,
+  FileImportIcon,
   Delete02Icon,
 } from '@hugeicons/core-free-icons';
+import * as DocumentPicker from 'expo-document-picker';
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import {
@@ -22,6 +24,13 @@ import {
   type as typography,
   type AppearanceMode,
 } from '../../src/design/theme';
+import type { TrackyBackupPreview } from '../../src/domain/models';
+import {
+  createTrackyBackupPreview,
+  parseAndMigrateTrackyData,
+  TrackyDataError,
+  TrackyRollbackError,
+} from '../../src/storage/trackyData';
 import { useTracky } from '../../src/store/TrackyProvider';
 
 const APPEARANCE: {
@@ -38,6 +47,7 @@ export default function SettingsScreen() {
     appearance,
     deleteAll,
     exportSnapshot,
+    replaceAllData,
     setAppearance,
     theme,
   } = useTracky();
@@ -57,6 +67,57 @@ export default function SettingsScreen() {
       });
     } catch {
       Alert.alert('Export failed', 'Tracky could not create the export file.');
+    }
+  };
+
+  const replaceImportedData = async (replacement: unknown) => {
+    try {
+      await replaceAllData(replacement);
+      Alert.alert('Import complete', 'Tracky replaced the local data on this device.');
+    } catch (error) {
+      Alert.alert(
+        'Import failed',
+        error instanceof TrackyRollbackError
+          ? error.message
+          : 'Tracky kept the data that was already on this device.',
+      );
+    }
+  };
+
+  const importData = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        copyToCacheDirectory: true,
+        multiple: false,
+        type: 'application/json',
+      });
+      if (result.canceled) return;
+
+      const file = new File(result.assets[0].uri);
+      const parsed = parseAndMigrateTrackyData(await file.text());
+      const preview = createTrackyBackupPreview(parsed);
+
+      Alert.alert(
+        'Replace all current data?',
+        formatImportPreview(preview),
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Replace all data',
+            style: 'destructive',
+            onPress: () => {
+              replaceImportedData(parsed.state).catch(() => undefined);
+            },
+          },
+        ],
+      );
+    } catch (error) {
+      Alert.alert(
+        'Cannot import this file',
+        error instanceof TrackyDataError
+          ? error.message
+          : 'Choose a valid Tracky JSON backup and try again.',
+      );
     }
   };
 
@@ -111,6 +172,14 @@ export default function SettingsScreen() {
               style={[styles.separator, { backgroundColor: theme.colors.separator }]}
             />
             <SettingsRow
+              icon={FileImportIcon}
+              label="Import data"
+              onPress={importData}
+            />
+            <View
+              style={[styles.separator, { backgroundColor: theme.colors.separator }]}
+            />
+            <SettingsRow
               danger
               icon={Delete02Icon}
               label="Delete all data"
@@ -138,6 +207,37 @@ export default function SettingsScreen() {
       </ScrollView>
     </View>
   );
+}
+
+function formatImportPreview(preview: TrackyBackupPreview) {
+  const lines = [
+    preview.exportedAt
+      ? `Exported ${new Intl.DateTimeFormat(undefined, {
+          dateStyle: 'medium',
+          timeStyle: 'short',
+        }).format(new Date(preview.exportedAt))}`
+      : 'Legacy Tracky data',
+    preview.appVersion ? `App version ${preview.appVersion}` : null,
+    '',
+    `${preview.trackerCount} ${preview.trackerCount === 1 ? 'tracker' : 'trackers'}`,
+    `${preview.entryCount} ${preview.entryCount === 1 ? 'entry' : 'entries'}`,
+    `${preview.activityCount} ${
+      preview.activityCount === 1 ? 'activity' : 'activities'
+    }`,
+    preview.dateRange
+      ? `Dates ${formatDateRange(preview.dateRange.start, preview.dateRange.end)}`
+      : 'No dated entries or activities',
+    '',
+    'This replaces everything currently stored on this device.',
+  ];
+  return lines.filter((line): line is string => line !== null).join('\n');
+}
+
+function formatDateRange(start: string, end: string) {
+  const formatter = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' });
+  const startLabel = formatter.format(new Date(start));
+  const endLabel = formatter.format(new Date(end));
+  return startLabel === endLabel ? startLabel : `${startLabel} – ${endLabel}`;
 }
 
 function SettingsRow({

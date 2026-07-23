@@ -42,7 +42,7 @@ See [docs/PRODUCT.md](docs/PRODUCT.md) for the product brief and MVP boundary.
 5. Log an event with an optional numeric amount and note.
 6. Browse today's events and activity timeline.
 7. Persist everything on-device.
-8. Export or delete all local data.
+8. Export, restore, or delete all local data.
 
 Week summaries, widgets, Shortcuts, sync, shared tracking, automated insights,
 HealthKit, location, and background sensing are intentionally later decisions.
@@ -56,8 +56,8 @@ HealthKit, location, and background sensing are intentionally later decisions.
 
 The repository contains the first functional vertical slice: a persistent local
 timeline, user-defined trackers and events, native Liquid Glass navigation, and
-on-device export/delete controls. The UI uses one shared token system and
-Hugeicons so new screens inherit the same visual language.
+versioned on-device backup/import/delete controls. The UI uses one shared token
+system and Hugeicons so new screens inherit the same visual language.
 
 ## Development
 

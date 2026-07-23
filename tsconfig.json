@@ -4,7 +4,8 @@
     "strict": true,
     "types": [
       "@hugeicons/core-free-icons",
-      "@hugeicons/react-native"
+      "@hugeicons/react-native",
+      "node"
     ]
   },
   "include": [
