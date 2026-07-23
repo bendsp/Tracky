@@ -11,8 +11,6 @@ import {
 } from '@expo/ui/swift-ui/modifiers';
 import type { PropsWithChildren } from 'react';
 import {
-  KeyboardAvoidingView,
-  Platform,
   StyleSheet,
   Text,
   useWindowDimensions,
@@ -57,8 +55,7 @@ export function Sheet({
           ]}
         >
           <RNHostView matchContents>
-            <KeyboardAvoidingView
-              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            <View
               style={[
                 styles.sheet,
                 {
@@ -85,7 +82,7 @@ export function Sheet({
                 />
               </View>
               {children}
-            </KeyboardAvoidingView>
+            </View>
           </RNHostView>
         </Group>
       </BottomSheet>

@@ -7,6 +7,7 @@ import {
   type PackedEvent,
 } from '@howljs/calendar-kit';
 import { BlurView } from 'expo-blur';
+import { useIsFocused } from 'expo-router';
 import {
   useCallback,
   useEffect,
@@ -80,6 +81,7 @@ function isSameLocalDay(left: Date, right: Date) {
 }
 
 export function HybridCalendarScreen() {
+  const isFocused = useIsFocused();
   const {
     activities,
     currentActivity,
@@ -112,6 +114,12 @@ export function HybridCalendarScreen() {
   useEffect(() => {
     setNow(new Date());
   }, [currentActivity?.id]);
+
+  useEffect(() => {
+    if (isFocused) return;
+    setCalendarLoaded(false);
+    lastFocusedDateRef.current = null;
+  }, [isFocused]);
 
   const day = useMemo(
     () =>
@@ -400,6 +408,15 @@ export function HybridCalendarScreen() {
     }),
     [theme],
   );
+
+  if (!isFocused) {
+    return (
+      <View
+        collapsable={false}
+        style={[styles.screen, { backgroundColor: theme.colors.background }]}
+      />
+    );
+  }
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>

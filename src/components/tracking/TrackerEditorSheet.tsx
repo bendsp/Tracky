@@ -237,7 +237,9 @@ export function TrackerEditorSheet({
     >
       {mode === 'field' ? (
         <ScrollView
+          automaticallyAdjustKeyboardInsets
           contentContainerStyle={styles.form}
+          keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           style={styles.viewport}
@@ -259,7 +261,6 @@ export function TrackerEditorSheet({
           </Pressable>
           <Field
             autoCapitalize="sentences"
-            autoFocus
             label="Name"
             onChangeText={setFieldName}
             placeholder="What?"
@@ -385,14 +386,15 @@ export function TrackerEditorSheet({
         </ScrollView>
       ) : (
         <ScrollView
+          automaticallyAdjustKeyboardInsets
           contentContainerStyle={styles.form}
+          keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           style={styles.viewport}
         >
           <Field
             autoCapitalize="sentences"
-            autoFocus={!tracker}
             label="Name"
             onChangeText={(name) => setDraft((current) => ({ ...current, name }))}
             placeholder="Drinking, meditation…"

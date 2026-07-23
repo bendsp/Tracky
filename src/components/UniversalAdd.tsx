@@ -1,6 +1,7 @@
 import {
   Activity01Icon,
   Add01Icon,
+  AddToListIcon,
   ArrowLeft01Icon,
   Cancel01Icon,
   NoteEditIcon,
@@ -155,7 +156,7 @@ export function UniversalAdd() {
         ) : null}
         <GlassButton
           accessibilityLabel={menuOpen ? 'Close add menu' : 'Add'}
-          icon={menuOpen ? Cancel01Icon : Add01Icon}
+          icon={menuOpen ? Cancel01Icon : AddToListIcon}
           onPress={() => setMenuOpen((open) => !open)}
           prominent
         />
@@ -193,7 +194,6 @@ export function UniversalAdd() {
             </Pressable>
             <Field
               autoCapitalize="sentences"
-              autoFocus
               label="Name"
               onChangeText={setActivityName}
               onSubmitEditing={submitNewActivity}
@@ -366,7 +366,9 @@ export function UniversalAdd() {
       >
         {trackers.length ? (
           <ScrollView
+            automaticallyAdjustKeyboardInsets
             contentContainerStyle={styles.eventForm}
+            keyboardDismissMode="interactive"
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
             style={styles.eventViewport}

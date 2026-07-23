@@ -40,15 +40,15 @@ function TabsContent() {
       shadowColor={theme.colors.separator}
       tintColor={theme.colors.accent}
     >
-      <NativeTabs.Trigger name="index">
-        <NativeTabs.Trigger.Icon sf="calendar" />
-        <NativeTabs.Trigger.Label>{calendarLabel}</NativeTabs.Trigger.Label>
-      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="track">
         <NativeTabs.Trigger.Icon
           sf={{ default: 'chart.bar', selected: 'chart.bar.fill' }}
         />
         <NativeTabs.Trigger.Label>Track</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="index">
+        <NativeTabs.Trigger.Icon sf="calendar" />
+        <NativeTabs.Trigger.Label>{calendarLabel}</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="settings">
         <NativeTabs.Trigger.Icon

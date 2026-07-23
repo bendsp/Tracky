@@ -266,7 +266,9 @@ export default function TrackerHistoryScreen() {
       >
         {selectedEvent ? (
           <ScrollView
+            automaticallyAdjustKeyboardInsets
             contentContainerStyle={styles.formContent}
+            keyboardDismissMode="interactive"
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
             style={styles.formViewport}

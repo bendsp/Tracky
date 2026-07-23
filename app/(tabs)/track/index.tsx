@@ -1,23 +1,38 @@
+import { Add01Icon } from '@hugeicons/core-free-icons';
+import { ListItem } from '@expo/ui';
 import {
-  Add01Icon,
-  ArrowRight01Icon,
-  Delete02Icon,
-  DragDropVerticalIcon,
-} from '@hugeicons/core-free-icons';
+  Host,
+  HStack,
+  Image as NativeImage,
+  List,
+  Spacer as NativeSpacer,
+  Text as NativeText,
+} from '@expo/ui/swift-ui';
+import {
+  accessibilityLabel as nativeAccessibilityLabel,
+  background,
+  deleteDisabled,
+  environment,
+  font,
+  foregroundStyle,
+  frame,
+  listRowBackground,
+  listRowInsets,
+  listRowSeparator,
+  listStyle,
+  moveDisabled,
+  onLongPressGesture,
+  onTapGesture,
+  padding,
+  scrollContentBackground,
+  shapes,
+  strokeBorder,
+  tag,
+} from '@expo/ui/swift-ui/modifiers';
 import * as Haptics from 'expo-haptics';
 import { Stack, useRouter } from 'expo-router';
-import { useMemo, useRef, useState } from 'react';
-import {
-  Alert,
-  Animated,
-  PanResponder,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRef, useState } from 'react';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '../../../src/components/Icon';
 import { TrackerEditorSheet } from '../../../src/components/tracking/TrackerEditorSheet';
@@ -26,7 +41,6 @@ import {
   colorWithAlpha,
   radius,
   spacing,
-  type as typography,
   type Theme,
 } from '../../../src/design/theme';
 import type { TrackedEvent, Tracker } from '../../../src/domain/models';
@@ -34,11 +48,8 @@ import { trackerSummary } from '../../../src/domain/tracking';
 import { useTimeframeNow } from '../../../src/hooks/useTimeframeNow';
 import { useTracky } from '../../../src/store/TrackyProvider';
 
-const ROW_STRIDE = 138;
-
 export default function TrackScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { deleteTracker, events, reorderTrackers, theme, trackers } = useTracky();
   const summaryNow = useTimeframeNow();
   const [editing, setEditing] = useState(false);
@@ -53,7 +64,6 @@ export default function TrackScreen() {
   };
 
   const confirmDelete = (tracker: Tracker) => {
-    if (Date.now() - longPressEditStartedAt.current < 1_000) return;
     const count = events.filter((event) => event.trackerId === tracker.id).length;
     Alert.alert(
       `Delete ${tracker.name}?`,
@@ -71,13 +81,27 @@ export default function TrackScreen() {
     );
   };
 
-  const moveTracker = (fromIndex: number, toIndex: number) => {
-    if (fromIndex === toIndex) return;
+  const moveTrackers = (sourceIndices: number[], destination: number) => {
+    const source = sourceIndices[0];
+    if (source === undefined) return;
+
     const ordered = [...trackers];
-    const [moved] = ordered.splice(fromIndex, 1);
-    ordered.splice(toIndex, 0, moved);
+    const [moved] = ordered.splice(source, 1);
+    if (!moved) return;
+
+    const adjustedDestination = source < destination ? destination - 1 : destination;
+    ordered.splice(
+      Math.max(0, Math.min(adjustedDestination, ordered.length)),
+      0,
+      moved,
+    );
     reorderTrackers(ordered.map((tracker) => tracker.id));
     Haptics.selectionAsync().catch(() => undefined);
+  };
+
+  const deleteTrackers = (indices: number[]) => {
+    const tracker = trackers[indices[0]];
+    if (tracker) confirmDelete(tracker);
   };
 
   return (
@@ -102,62 +126,104 @@ export default function TrackScreen() {
           title: 'Track',
         }}
       />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={[
-          styles.content,
-          { paddingBottom: insets.bottom + 150 },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        {trackers.length ? null : (
-          <Text style={[typography.body, { color: theme.colors.textSecondary }]}>
-            Make a tracker for anything you want to remember.
-          </Text>
-        )}
-        {trackers.map((tracker, index) => (
-          <SortableTrackerRow
-            editing={editing}
-            eventCount={
-              events.filter((event) => event.trackerId === tracker.id).length
-            }
-            events={events}
-            index={index}
-            key={tracker.id}
-            now={summaryNow}
-            onDelete={() => confirmDelete(tracker)}
-            onEnterEditing={enterEditing}
-            onMove={moveTracker}
-            onOpen={() => router.push(`/track/${tracker.id}`)}
-            theme={theme}
-            tracker={tracker}
-            trackerCount={trackers.length}
-          />
-        ))}
-        <Pressable
-          accessibilityLabel="Create a new tracker"
-          accessibilityRole="button"
-          onPress={() => setEditorOpen(true)}
-          style={({ pressed }) => [
-            styles.newCard,
-            {
-              backgroundColor: pressed
-                ? theme.colors.accentSoft
-                : theme.colors.surface,
-              borderColor: pressed ? theme.colors.accent : theme.colors.border,
-            },
+      <Host style={styles.listHost}>
+        <List
+          modifiers={[
+            listStyle('plain'),
+            scrollContentBackground('hidden'),
+            background(theme.colors.background),
+            environment({
+              key: 'editMode',
+              value: editing ? 'active' : 'inactive',
+            }),
           ]}
         >
-          <View
-            style={[styles.newIcon, { backgroundColor: theme.colors.accentSoft }]}
+          {trackers.length ? null : (
+            <NativeText
+              modifiers={[
+                foregroundStyle(theme.colors.textSecondary),
+                padding({ all: spacing.lg }),
+                listRowBackground(theme.colors.background),
+                listRowSeparator('hidden'),
+              ]}
+            >
+              Make a tracker for anything you want to remember.
+            </NativeText>
+          )}
+          <List.ForEach onDelete={deleteTrackers} onMove={moveTrackers}>
+            {trackers.map((tracker) => (
+              <TrackerListItem
+                editing={editing}
+                eventCount={
+                  events.filter((event) => event.trackerId === tracker.id).length
+                }
+                events={events}
+                key={tracker.id}
+                now={summaryNow}
+                onEnterEditing={enterEditing}
+                onOpen={() => {
+                  if (Date.now() - longPressEditStartedAt.current < 1_000) return;
+                  router.push(`/track/${tracker.id}`);
+                }}
+                theme={theme}
+                tracker={tracker}
+              />
+            ))}
+          </List.ForEach>
+          <ListItem
+            leading={
+              <View
+                style={[
+                  styles.newIcon,
+                  { backgroundColor: theme.colors.accentSoft },
+                ]}
+              >
+                <Icon color={theme.colors.accent} icon={Add01Icon} size={21} />
+              </View>
+            }
+            modifiers={[
+              nativeAccessibilityLabel('Create a new tracker'),
+              listRowInsets({
+                top: spacing.xs,
+                leading: spacing.lg,
+                bottom: spacing.xs,
+                trailing: spacing.lg,
+              }),
+              listRowSeparator('hidden'),
+              listRowBackground(theme.colors.background),
+              padding({ horizontal: spacing.md, vertical: spacing.md }),
+              background(
+                theme.colors.surface,
+                shapes.roundedRectangle({ cornerRadius: radius.lg }),
+              ),
+              strokeBorder({
+                color: theme.colors.border,
+                shape: 'roundedRectangle',
+                cornerRadius: radius.lg,
+                style: { lineWidth: 1, dash: [5, 4] },
+              }),
+            ]}
+            onPress={() => setEditorOpen(true)}
           >
-            <Icon color={theme.colors.accent} icon={Add01Icon} size={23} />
-          </View>
-          <Text style={[typography.cardTitle, { color: theme.colors.text }]}>
-            New
-          </Text>
-        </Pressable>
-      </ScrollView>
+            <NativeText
+              modifiers={[
+                font({ textStyle: 'headline', weight: 'semibold' }),
+                foregroundStyle(theme.colors.text),
+              ]}
+            >
+              New
+            </NativeText>
+          </ListItem>
+          <NativeSpacer
+            modifiers={[
+              frame({ height: 112 }),
+              listRowInsets({ top: 0, leading: 0, bottom: 0, trailing: 0 }),
+              listRowBackground(theme.colors.background),
+              listRowSeparator('hidden'),
+            ]}
+          />
+        </List>
+      </Host>
       <TrackerEditorSheet
         onClose={() => setEditorOpen(false)}
         visible={editorOpen}
@@ -166,211 +232,120 @@ export default function TrackScreen() {
   );
 }
 
-function SortableTrackerRow({
+function TrackerListItem({
   editing,
   eventCount,
   events,
-  index,
   now,
-  onDelete,
   onEnterEditing,
-  onMove,
   onOpen,
   theme,
   tracker,
-  trackerCount,
 }: {
   editing: boolean;
   eventCount: number;
   events: TrackedEvent[];
-  index: number;
   now: Date;
-  onDelete: () => void;
   onEnterEditing: () => void;
-  onMove: (fromIndex: number, toIndex: number) => void;
   onOpen: () => void;
   theme: Theme;
   tracker: Tracker;
-  trackerCount: number;
 }) {
-  const translation = useRef(new Animated.Value(0)).current;
-  const active = useRef(new Animated.Value(0)).current;
   const summary = trackerSummary(tracker, events, now);
 
-  const settle = (dy: number) => {
-    const offset = Math.round(dy / ROW_STRIDE);
-    const target = Math.max(0, Math.min(trackerCount - 1, index + offset));
-    Animated.parallel([
-      Animated.spring(translation, {
-        friction: 8,
-        tension: 90,
-        toValue: 0,
-        useNativeDriver: false,
-      }),
-      Animated.timing(active, {
-        duration: 160,
-        toValue: 0,
-        useNativeDriver: false,
-      }),
-    ]).start(() => onMove(index, target));
-  };
-
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dy) > 2,
-        onPanResponderGrant: () => {
-          translation.setOffset(0);
-          translation.setValue(0);
-          Animated.timing(active, {
-            duration: 120,
-            toValue: 1,
-            useNativeDriver: false,
-          }).start();
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(
-            () => undefined,
-          );
-        },
-        onPanResponderMove: (_, gesture) => translation.setValue(gesture.dy),
-        onPanResponderRelease: (_, gesture) => settle(gesture.dy),
-        onPanResponderTerminate: (_, gesture) => settle(gesture.dy),
-        onStartShouldSetPanResponder: () => editing,
-      }),
-    [active, editing, index, trackerCount, translation],
-  );
-
-  const animatedStyle = {
-    opacity: active.interpolate({ inputRange: [0, 1], outputRange: [1, 0.94] }),
-    transform: [
-      { translateY: translation },
-      {
-        scale: active.interpolate({
-          inputRange: [0, 1],
-          outputRange: [1, 1.025],
+  return (
+    <ListItem
+      leading={
+        <View
+          style={[
+            styles.icon,
+            {
+              backgroundColor: colorWithAlpha(tracker.color, 0.12),
+              borderColor: colorWithAlpha(tracker.color, 0.25),
+            },
+          ]}
+        >
+          <TrackerIcon color={tracker.color} name={tracker.icon} size={25} />
+        </View>
+      }
+      modifiers={[
+        tag(tracker.id),
+        nativeAccessibilityLabel(
+          `${tracker.name}, ${summary.value}, ${summary.detail}, ${eventCount} ${eventCount === 1 ? 'entry' : 'entries'}`,
+        ),
+        listRowInsets({
+          top: spacing.xs,
+          leading: spacing.lg,
+          bottom: spacing.xs,
+          trailing: spacing.lg,
         }),
-      },
-    ],
-    zIndex: active.interpolate({ inputRange: [0, 1], outputRange: [0, 10] }),
-  };
-
-  const copy = (
-    <View style={styles.copy}>
-      <Text
-        numberOfLines={1}
-        style={[typography.cardTitle, { color: theme.colors.text }]}
+        listRowSeparator('hidden'),
+        listRowBackground(theme.colors.background),
+        padding({ horizontal: spacing.md, vertical: spacing.md }),
+        background(
+          theme.colors.surface,
+          shapes.roundedRectangle({ cornerRadius: radius.lg }),
+        ),
+        strokeBorder({
+          color: theme.colors.border,
+          shape: 'roundedRectangle',
+          cornerRadius: radius.lg,
+          style: { lineWidth: 1 },
+        }),
+        deleteDisabled(!editing),
+        moveDisabled(!editing),
+        onLongPressGesture(onEnterEditing, 0.45),
+        onTapGesture(() => {
+          if (!editing) onOpen();
+        }),
+      ]}
+      supportingText={
+        editing ? undefined : (
+          <NativeText
+            modifiers={[
+              font({ textStyle: 'caption', weight: 'medium' }),
+              foregroundStyle(theme.colors.textSecondary),
+            ]}
+          >
+            {summary.detail}
+          </NativeText>
+        )
+      }
+      trailing={
+        editing ? undefined : (
+          <HStack spacing={spacing.xs}>
+            <NativeText
+              modifiers={[
+                font({ textStyle: 'title3', weight: 'bold' }),
+                foregroundStyle(theme.colors.text),
+              ]}
+            >
+              {summary.value}
+            </NativeText>
+            <NativeImage
+              color={theme.colors.textTertiary}
+              size={14}
+              systemName="chevron.right"
+            />
+          </HStack>
+        )
+      }
+    >
+      <NativeText
+        modifiers={[
+          font({ textStyle: 'headline', weight: 'semibold' }),
+          foregroundStyle(theme.colors.text),
+        ]}
       >
         {tracker.name}
-      </Text>
-      <Text
-        numberOfLines={1}
-        style={[styles.summary, { color: theme.colors.text }]}
-      >
-        {summary.value}
-      </Text>
-      <Text
-        numberOfLines={1}
-        style={[typography.caption, { color: theme.colors.textSecondary }]}
-      >
-        {summary.detail}
-      </Text>
-    </View>
-  );
-
-  return (
-    <Animated.View
-      style={[
-        styles.card,
-        {
-          backgroundColor: theme.colors.surface,
-          borderColor: theme.colors.border,
-        },
-        animatedStyle,
-      ]}
-    >
-      {editing ? (
-        <>
-          <Pressable
-            accessibilityLabel={`Delete ${tracker.name}`}
-            accessibilityRole="button"
-            onPress={onDelete}
-            style={[styles.delete, { backgroundColor: theme.colors.danger }]}
-          >
-            <Icon
-              color={theme.colors.onAccent}
-              icon={Delete02Icon}
-              size={16}
-              strokeWidth={2.2}
-            />
-          </Pressable>
-          {copy}
-          <View
-            accessibilityActions={[
-              ...(index > 0 ? [{ name: 'decrement', label: 'Move up' }] : []),
-              ...(index < trackerCount - 1
-                ? [{ name: 'increment', label: 'Move down' }]
-                : []),
-            ]}
-            accessibilityLabel={`Reorder ${tracker.name}`}
-            accessibilityRole="adjustable"
-            accessibilityValue={{ text: `${index + 1} of ${trackerCount}` }}
-            accessible
-            onAccessibilityAction={(event) => {
-              if (event.nativeEvent.actionName === 'decrement') {
-                onMove(index, Math.max(0, index - 1));
-              }
-              if (event.nativeEvent.actionName === 'increment') {
-                onMove(index, Math.min(trackerCount - 1, index + 1));
-              }
-            }}
-            style={styles.drag}
-            {...panResponder.panHandlers}
-          >
-            <Icon
-              color={theme.colors.textTertiary}
-              icon={DragDropVerticalIcon}
-              size={24}
-            />
-          </View>
-        </>
-      ) : (
-        <Pressable
-          accessibilityLabel={`${tracker.name}, ${summary.value}, ${summary.detail}, ${eventCount} ${eventCount === 1 ? 'entry' : 'entries'}`}
-          accessibilityRole="button"
-          onLongPress={onEnterEditing}
-          onPress={onOpen}
-          style={styles.cardPressable}
-        >
-          <View
-            style={[
-              styles.icon,
-              {
-                backgroundColor: colorWithAlpha(tracker.color, 0.12),
-                borderColor: colorWithAlpha(tracker.color, 0.25),
-              },
-            ]}
-          >
-            <TrackerIcon color={tracker.color} name={tracker.icon} size={27} />
-          </View>
-          {copy}
-          <Icon
-            color={theme.colors.textTertiary}
-            icon={ArrowRight01Icon}
-            size={21}
-          />
-        </Pressable>
-      )}
-    </Animated.View>
+      </NativeText>
+    </ListItem>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  content: {
-    gap: spacing.sm,
-    paddingBottom: spacing.lg,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-  },
+  listHost: { flex: 1 },
   headerButton: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -378,63 +353,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xs,
   },
   headerButtonText: { fontSize: 17, fontWeight: '500' },
-  card: {
-    alignItems: 'center',
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: spacing.md,
-    minHeight: 126,
-    padding: spacing.md,
-  },
-  cardPressable: {
-    alignItems: 'center',
-    flex: 1,
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
   icon: {
     alignItems: 'center',
     borderRadius: radius.md,
     borderWidth: 1,
-    height: 58,
+    height: 48,
     justifyContent: 'center',
-    width: 58,
-  },
-  delete: {
-    alignItems: 'center',
-    borderRadius: radius.pill,
-    height: 28,
-    justifyContent: 'center',
-    width: 28,
-  },
-  copy: { flex: 1, gap: spacing.xxs },
-  summary: {
-    fontSize: 26,
-    fontWeight: '700',
-    letterSpacing: -0.6,
-  },
-  drag: {
-    alignItems: 'center',
-    height: 52,
-    justifyContent: 'center',
-    width: 38,
-  },
-  newCard: {
-    alignItems: 'center',
-    borderRadius: radius.lg,
-    borderStyle: 'dashed',
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: spacing.md,
-    minHeight: 74,
-    paddingHorizontal: spacing.md,
+    width: 48,
   },
   newIcon: {
     alignItems: 'center',
     borderRadius: radius.pill,
-    height: 40,
+    height: 36,
     justifyContent: 'center',
-    width: 40,
+    width: 36,
   },
 });
