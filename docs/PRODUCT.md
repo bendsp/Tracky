@@ -71,6 +71,24 @@ Manage user-defined event types and browse their histories. A tracker contains:
 - appearance and time format;
 - later: backup/sync and integrations.
 
+## Visual direction
+
+Tracky should feel quiet, precise, and native:
+
+- predominantly monochrome surfaces, typography, dividers, and controls;
+- restrained use of one cool-blue accent for the current activity, primary
+  action, selection, and meaningful timeline emphasis;
+- no rainbow category system or large decorative gradients;
+- hierarchy should come primarily from spacing, typography, weight, and
+  contrast—not from filling every object with color;
+- the universal `+` remains visually obvious and thumb-reachable without
+  overwhelming the timeline.
+
+The accent must be represented as a semantic design token rather than embedded
+throughout components. Cool blue is the initial default, but the model should
+allow user-selectable accents later while preserving contrast and accessibility
+in light and dark mode.
+
 ## Data model
 
 The first implementation can stay deliberately small:
