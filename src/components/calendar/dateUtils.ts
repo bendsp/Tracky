@@ -1,7 +1,7 @@
 import type {
   ActivityBlock,
   TrackedEvent,
-} from '../../store/TrackyProvider';
+} from '../../domain/models';
 
 export function toLocalDateId(date: Date) {
   const year = date.getFullYear();

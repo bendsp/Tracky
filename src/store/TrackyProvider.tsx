@@ -18,54 +18,17 @@ import {
   type AppearanceMode,
   type Theme,
 } from '../design/theme';
+import type {
+  ActivityBlock,
+  ActivityType,
+  HexColor,
+  PersistedTrackyState,
+  Tracker,
+  TrackedEvent,
+  TrackyExport,
+} from '../domain/models';
 
-export type ActivityType = {
-  id: string;
-  name: string;
-  color: string;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type ActivityBlock = {
-  id: string;
-  activityTypeId: string;
-  name: string;
-  color: string;
-  startedAt: string;
-  endedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type Tracker = {
-  id: string;
-  name: string;
-  unit: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type TrackedEvent = {
-  id: string;
-  trackerId: string;
-  occurredAt: string;
-  numericValue: number | null;
-  unit: string | null;
-  note: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
-
-type PersistedState = {
-  activityTypes: ActivityType[];
-  activities: ActivityBlock[];
-  trackers: Tracker[];
-  events: TrackedEvent[];
-  appearance: AppearanceMode;
-};
-
-type TrackyContextValue = PersistedState & {
+type TrackyContextValue = PersistedTrackyState & {
   hydrated: boolean;
   loadError: boolean;
   saveError: boolean;
@@ -91,12 +54,12 @@ type TrackyContextValue = PersistedState & {
   retryHydration: () => void;
   retryPersistence: () => void;
   deleteAll: () => Promise<void>;
-  exportSnapshot: () => PersistedState & { exportedAt: string; schemaVersion: 2 };
+  exportSnapshot: () => TrackyExport;
 };
 
 const STORAGE_KEY = 'tracky.v1';
 
-const initialState: PersistedState = {
+const initialState: PersistedTrackyState = {
   activityTypes: [],
   activities: [],
   trackers: [],
@@ -110,14 +73,14 @@ function isString(value: unknown): value is string {
   return typeof value === 'string';
 }
 
-function isHexColor(value: unknown): value is string {
+function isHexColor(value: unknown): value is HexColor {
   return isString(value) && /^#[0-9A-Fa-f]{6}$/.test(value);
 }
 
-function readStoredState(value: string): PersistedState | null {
+function readStoredState(value: string): PersistedTrackyState | null {
   const parsed: unknown = JSON.parse(value);
   if (!parsed || typeof parsed !== 'object') return null;
-  const candidate = parsed as Partial<PersistedState>;
+  const candidate = parsed as Partial<PersistedTrackyState>;
   if (
     !Array.isArray(candidate.activities) ||
     !Array.isArray(candidate.trackers) ||
@@ -231,7 +194,7 @@ function id(prefix: string) {
 
 export function TrackyProvider({ children }: PropsWithChildren) {
   const systemScheme = useColorScheme();
-  const [state, setState] = useState<PersistedState>(initialState);
+  const [state, setState] = useState<PersistedTrackyState>(initialState);
   const [hydrated, setHydrated] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [storageReady, setStorageReady] = useState(false);
@@ -266,7 +229,7 @@ export function TrackyProvider({ children }: PropsWithChildren) {
     hydrate();
   }, [hydrate]);
 
-  const persist = useCallback((snapshot: PersistedState) => {
+  const persist = useCallback((snapshot: PersistedTrackyState) => {
     const payload = JSON.stringify(snapshot);
     const write = saveQueue.current.then(() =>
       AsyncStorage.setItem(STORAGE_KEY, payload),

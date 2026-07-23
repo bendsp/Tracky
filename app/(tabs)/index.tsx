@@ -1,11 +1,5 @@
-import { CalendarTimelineScreen } from '../../src/components/calendar/CalendarTimelineScreen';
-import { WixCalendarControl } from '../../src/components/calendar/WixCalendarControl';
+import { HybridCalendarScreen } from '../../src/components/calendar/HybridCalendarScreen';
 
 export default function CalendarScreen() {
-  return (
-    <CalendarTimelineScreen
-      renderCalendar={(props) => <WixCalendarControl {...props} />}
-      title="Calendar"
-    />
-  );
+  return <HybridCalendarScreen />;
 }

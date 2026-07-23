@@ -21,7 +21,8 @@ import { Icon } from '../../src/components/Icon';
 import { ScreenHeader } from '../../src/components/Screen';
 import { Sheet } from '../../src/components/Sheet';
 import { radius, spacing, type as typography } from '../../src/design/theme';
-import { useTracky, type Tracker } from '../../src/store/TrackyProvider';
+import type { Tracker } from '../../src/domain/models';
+import { useTracky } from '../../src/store/TrackyProvider';
 
 export default function TrackScreen() {
   const { createTracker, events, theme, trackers } = useTracky();
