@@ -95,19 +95,20 @@ export function UniversalAdd() {
     closeActivitySheet();
   };
 
-  const submitNewActivity = () => {
-    if (!activityName.trim()) return;
+  const submitNewActivity = (submittedName = activityName) => {
+    const cleanName = submittedName.trim();
+    if (!cleanName) return;
     const existing = activityTypes.find(
       (activityType) =>
         activityType.name.toLocaleLowerCase() ===
-        activityName.trim().toLocaleLowerCase(),
+        cleanName.toLocaleLowerCase(),
     );
     if (existing) {
       switchToActivity(existing.id);
       return;
     }
     const createdActivityTypeId = createActivityAndSwitch(
-      activityName,
+      cleanName,
       activityColor,
     );
     if (createdActivityTypeId) closeActivitySheet();
@@ -248,7 +249,7 @@ export function UniversalAdd() {
             <PrimaryButton
               disabled={!activityName.trim()}
               label={currentActivity ? 'Create and switch' : 'Create and start'}
-              onPress={submitNewActivity}
+              onPress={() => submitNewActivity()}
             />
           </>
         ) : (
@@ -361,6 +362,7 @@ export function UniversalAdd() {
 
       <Sheet
         onClose={() => setAddMode(null)}
+        size="large"
         title={selectedTracker ? `Log ${selectedTracker.name}` : 'Log an event'}
         visible={addMode === 'event'}
       >

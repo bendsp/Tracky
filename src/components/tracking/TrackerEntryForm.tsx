@@ -87,8 +87,8 @@ export function TrackerEntryForm({
     setOccurredAt(combined);
   };
 
-  const useNewChoice = (fieldId: string) => {
-    const clean = newChoices[fieldId]?.trim();
+  const useNewChoice = (fieldId: string, submittedChoice?: string) => {
+    const clean = (submittedChoice ?? newChoices[fieldId])?.trim();
     if (!clean) return;
     const field = tracker.fields.find(
       (candidate) => candidate.id === fieldId && candidate.type === 'choice',
@@ -163,7 +163,7 @@ export function TrackerEntryForm({
                         [field.id]: choice,
                       }))
                     }
-                    onSubmitEditing={() => useNewChoice(field.id)}
+                    onSubmitEditing={(choice) => useNewChoice(field.id, choice)}
                     placeholder="Add another option"
                     returnKeyType="done"
                     value={newChoices[field.id] ?? ''}

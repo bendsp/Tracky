@@ -35,7 +35,11 @@ import type {
 import { useTracky } from '../../store/TrackyProvider';
 import { ChoiceChip, Field, PrimaryButton } from '../Form';
 import { Icon } from '../Icon';
-import { NativeColorPicker, NativeSegmentedPicker } from '../NativeControls';
+import {
+  NativeColorPicker,
+  NativeMenuPicker,
+  NativeSegmentedPicker,
+} from '../NativeControls';
 import { Sheet } from '../Sheet';
 import { TrackerIcon, trackerIconOptions } from './TrackerIcon';
 
@@ -127,8 +131,8 @@ export function TrackerEditorSheet({
     onClose();
   };
 
-  const addChoice = () => {
-    const clean = choiceName.trim();
+  const addChoice = (submittedChoice = choiceName) => {
+    const clean = submittedChoice.trim();
     if (
       !clean ||
       choices.some(
@@ -232,6 +236,7 @@ export function TrackerEditorSheet({
   return (
     <Sheet
       onClose={close}
+      size="large"
       title={mode === 'field' ? 'Add field' : tracker ? 'Edit tracker' : 'New tracker'}
       visible={visible}
     >
@@ -350,7 +355,7 @@ export function TrackerEditorSheet({
                   accessibilityLabel="Add choice"
                   accessibilityRole="button"
                   disabled={!choiceName.trim()}
-                  onPress={addChoice}
+                  onPress={() => addChoice()}
                   style={[
                     styles.inlineButton,
                     {
@@ -606,35 +611,25 @@ export function TrackerEditorSheet({
                 value={draft.summary.countLabel}
               />
             ) : (
-              <View style={styles.section}>
-                <Text
-                  style={[typography.label, { color: theme.colors.textSecondary }]}
-                >
-                  Number field
-                </Text>
-                <View style={styles.chips}>
-                  {numberFields.map((field) => (
-                    <ChoiceChip
-                      key={field.id}
-                      label={field.name}
-                      onPress={() =>
-                        setDraft((current) => ({
-                          ...current,
-                          summary: {
-                            calculation: 'sum',
-                            timeframe: current.summary.timeframe,
-                            fieldId: field.id,
-                          },
-                        }))
-                      }
-                      selected={
-                        draft.summary.calculation === 'sum' &&
-                        draft.summary.fieldId === field.id
-                      }
-                    />
-                  ))}
-                </View>
-              </View>
+              <NativeMenuPicker
+                accessibilityLabel="Number field"
+                label="Number field"
+                onSelectionChange={(fieldId) =>
+                  setDraft((current) => ({
+                    ...current,
+                    summary: {
+                      calculation: 'sum',
+                      timeframe: current.summary.timeframe,
+                      fieldId,
+                    },
+                  }))
+                }
+                options={numberFields.map((field) => ({
+                  label: field.name,
+                  value: field.id,
+                }))}
+                selection={draft.summary.fieldId}
+              />
             )}
             <NativeSegmentedPicker
               accessibilityLabel="Summary timeframe"

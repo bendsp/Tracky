@@ -6,6 +6,7 @@ import {
   Text,
 } from '@expo/ui/swift-ui';
 import {
+  accessibilityLabel as nativeAccessibilityLabel,
   datePickerStyle,
   pickerStyle,
   tag,
@@ -37,6 +38,47 @@ export function NativeSegmentedPicker<T extends string>({
       <Picker
         label={accessibilityLabel}
         modifiers={[pickerStyle('segmented')]}
+        onSelectionChange={onSelectionChange}
+        selection={selection}
+      >
+        {options.map((option) => (
+          <Text key={option.value} modifiers={[tag(option.value)]}>
+            {option.label}
+          </Text>
+        ))}
+      </Picker>
+    </Host>
+  );
+}
+
+export function NativeMenuPicker<T extends string>({
+  accessibilityLabel,
+  label,
+  onSelectionChange,
+  options,
+  selection,
+}: {
+  accessibilityLabel: string;
+  label: string;
+  onSelectionChange: (selection: T) => void;
+  options: readonly { label: string; value: T }[];
+  selection: T;
+}) {
+  const { theme } = useTracky();
+
+  return (
+    <Host
+      colorScheme={theme.scheme}
+      matchContents={{ vertical: true }}
+      seedColor={theme.colors.accent}
+      style={styles.fullWidth}
+    >
+      <Picker
+        label={label || accessibilityLabel}
+        modifiers={[
+          nativeAccessibilityLabel(accessibilityLabel),
+          pickerStyle('menu'),
+        ]}
         onSelectionChange={onSelectionChange}
         selection={selection}
       >

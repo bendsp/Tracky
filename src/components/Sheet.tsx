@@ -7,6 +7,7 @@ import {
 } from '@expo/ui/swift-ui';
 import {
   presentationBackground,
+  presentationDetents,
   presentationDragIndicator,
 } from '@expo/ui/swift-ui/modifiers';
 import type { PropsWithChildren } from 'react';
@@ -24,10 +25,12 @@ import { GlassButton } from './GlassButton';
 export function Sheet({
   children,
   onClose,
+  size = 'content',
   title,
   visible,
 }: PropsWithChildren<{
   onClose: () => void;
+  size?: 'content' | 'large';
   title: string;
   visible: boolean;
 }>) {
@@ -42,7 +45,7 @@ export function Sheet({
       style={styles.host}
     >
       <BottomSheet
-        fitToContents
+        fitToContents={size === 'content'}
         isPresented={visible}
         onIsPresentedChange={(isPresented) => {
           if (!isPresented) onClose();
@@ -51,7 +54,8 @@ export function Sheet({
         <Group
           modifiers={[
             presentationBackground(theme.colors.backgroundRaised),
-            presentationDragIndicator('visible'),
+            presentationDragIndicator('hidden'),
+            ...(size === 'large' ? [presentationDetents(['large'])] : []),
           ]}
         >
           <RNHostView matchContents>

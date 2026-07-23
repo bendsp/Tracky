@@ -261,6 +261,7 @@ export default function TrackerHistoryScreen() {
 
       <Sheet
         onClose={() => setSelectedEventId(null)}
+        size="large"
         title="Edit entry"
         visible={!!selectedEvent}
       >
