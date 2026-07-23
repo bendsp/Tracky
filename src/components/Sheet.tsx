@@ -1,0 +1,110 @@
+import { Cancel01Icon } from '@hugeicons/core-free-icons';
+import {
+  BottomSheet,
+  Group,
+  Host,
+  RNHostView,
+} from '@expo/ui/swift-ui';
+import {
+  presentationBackground,
+  presentationDragIndicator,
+} from '@expo/ui/swift-ui/modifiers';
+import type { PropsWithChildren } from 'react';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
+
+import { spacing, type as typography } from '../design/theme';
+import { useTracky } from '../store/TrackyProvider';
+import { GlassButton } from './GlassButton';
+
+export function Sheet({
+  children,
+  onClose,
+  title,
+  visible,
+}: PropsWithChildren<{
+  onClose: () => void;
+  title: string;
+  visible: boolean;
+}>) {
+  const { theme } = useTracky();
+  const { width } = useWindowDimensions();
+
+  return (
+    <Host
+      colorScheme={theme.scheme}
+      pointerEvents="box-none"
+      seedColor={theme.colors.accent}
+      style={styles.host}
+    >
+      <BottomSheet
+        fitToContents
+        isPresented={visible}
+        onIsPresentedChange={(isPresented) => {
+          if (!isPresented) onClose();
+        }}
+      >
+        <Group
+          modifiers={[
+            presentationBackground(theme.colors.backgroundRaised),
+            presentationDragIndicator('visible'),
+          ]}
+        >
+          <RNHostView matchContents>
+            <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+              style={[
+                styles.sheet,
+                {
+                  backgroundColor: theme.colors.backgroundRaised,
+                  width,
+                },
+              ]}
+            >
+              <View style={styles.heading}>
+                <Text
+                  style={[
+                    typography.section,
+                    styles.headingCopy,
+                    { color: theme.colors.text },
+                  ]}
+                >
+                  {title}
+                </Text>
+                <GlassButton
+                  accessibilityLabel="Close"
+                  compact
+                  icon={Cancel01Icon}
+                  onPress={onClose}
+                />
+              </View>
+              {children}
+            </KeyboardAvoidingView>
+          </RNHostView>
+        </Group>
+      </BottomSheet>
+    </Host>
+  );
+}
+
+const styles = StyleSheet.create({
+  host: { position: 'absolute' },
+  sheet: {
+    gap: spacing.md,
+    paddingBottom: spacing.xxl,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+  },
+  heading: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  headingCopy: { flex: 1, paddingRight: spacing.md },
+});

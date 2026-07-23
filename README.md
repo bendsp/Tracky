@@ -54,7 +54,10 @@ HealthKit, location, and background sensing are intentionally later decisions.
 - TypeScript
 - iOS only for the first release
 
-The repository currently contains the clean Expo scaffold and product contract.
+The repository contains the first functional vertical slice: a persistent local
+timeline, user-defined trackers and events, native Liquid Glass navigation, and
+on-device export/delete controls. The UI uses one shared token system and
+Hugeicons so new screens inherit the same visual language.
 
 ## Development
 

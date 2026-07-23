@@ -3,13 +3,21 @@
     "name": "Tracky",
     "slug": "tracky",
     "version": "0.1.0",
-    "platforms": ["ios"],
+    "platforms": [
+      "ios"
+    ],
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "tracky",
     "userInterfaceStyle": "automatic",
     "ios": {
+      "bundleIdentifier": "com.bendsp.tracky",
       "supportsTablet": false
-    }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-sharing",
+      "expo-font"
+    ]
   }
 }
