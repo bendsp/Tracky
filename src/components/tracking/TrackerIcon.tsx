@@ -1,11 +1,11 @@
 import {
-  Activity01Icon,
   BookOpen01Icon,
   Coffee02Icon,
   DropletIcon,
   FavouriteIcon,
   Leaf01Icon,
   SparklesIcon,
+  WorkoutRunIcon,
   Yoga01Icon,
 } from '@hugeicons/core-free-icons';
 import type { IconSvgElement } from '@hugeicons/react-native';
@@ -17,7 +17,7 @@ const icons: Record<TrackerIconName, IconSvgElement> = {
   droplet: DropletIcon,
   meditation: Yoga01Icon,
   coffee: Coffee02Icon,
-  activity: Activity01Icon,
+  activity: WorkoutRunIcon,
   heart: FavouriteIcon,
   book: BookOpen01Icon,
   leaf: Leaf01Icon,

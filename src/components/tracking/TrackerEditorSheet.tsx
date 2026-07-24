@@ -32,6 +32,10 @@ import type {
   TrackerIconName,
   TrackerSummaryTimeframe,
 } from '../../domain/models';
+import {
+  createTrackerTemplateDraft,
+  type TrackerTemplateId,
+} from '../../domain/trackerTemplates';
 import { useTracky } from '../../store/TrackyProvider';
 import { ChoiceChip, Field, PrimaryButton } from '../Form';
 import { Icon } from '../Icon';
@@ -42,8 +46,9 @@ import {
 } from '../NativeControls';
 import { Sheet } from '../Sheet';
 import { TrackerIcon, trackerIconOptions } from './TrackerIcon';
+import { TrackerTemplateGateway } from './TrackerTemplateGateway';
 
-type EditorMode = 'tracker' | 'field';
+type EditorMode = 'gateway' | 'tracker' | 'field';
 
 const fieldTypeOptions = [
   { label: 'Choice', value: 'choice' },
@@ -84,7 +89,9 @@ export function TrackerEditorSheet({
   visible: boolean;
 }) {
   const { createTracker, events, theme, updateTracker } = useTracky();
-  const [mode, setMode] = useState<EditorMode>('tracker');
+  const [mode, setMode] = useState<EditorMode>(
+    tracker ? 'tracker' : 'gateway',
+  );
   const [draft, setDraft] = useState<TrackerDraft>(newDraft);
   const [fieldName, setFieldName] = useState('');
   const [fieldType, setFieldType] = useState<TrackerFieldType>('choice');
@@ -94,7 +101,7 @@ export function TrackerEditorSheet({
 
   useEffect(() => {
     if (!visible) return;
-    setMode('tracker');
+    setMode(tracker ? 'tracker' : 'gateway');
     setDraft(
       tracker
         ? {
@@ -127,8 +134,20 @@ export function TrackerEditorSheet({
 
   const close = () => {
     resetField();
-    setMode('tracker');
+    setMode(tracker ? 'tracker' : 'gateway');
     onClose();
+  };
+
+  const openCustomDraft = () => {
+    resetField();
+    setDraft(newDraft());
+    setMode('tracker');
+  };
+
+  const openTemplateDraft = (templateId: TrackerTemplateId) => {
+    resetField();
+    setDraft(createTrackerTemplateDraft(templateId));
+    setMode('tracker');
   };
 
   const addChoice = (submittedChoice = choiceName) => {
@@ -237,10 +256,15 @@ export function TrackerEditorSheet({
     <Sheet
       onClose={close}
       size="large"
-      title={mode === 'field' ? 'Add field' : tracker ? 'Edit tracker' : 'New tracker'}
+      title={mode === 'field' ? 'Add field' : tracker ? 'Edit tracker' : 'New Tracker'}
       visible={visible}
     >
-      {mode === 'field' ? (
+      {mode === 'gateway' ? (
+        <TrackerTemplateGateway
+          onSelectCustom={openCustomDraft}
+          onSelectTemplate={openTemplateDraft}
+        />
+      ) : mode === 'field' ? (
         <ScrollView
           automaticallyAdjustKeyboardInsets
           contentContainerStyle={styles.form}
@@ -398,6 +422,26 @@ export function TrackerEditorSheet({
           showsVerticalScrollIndicator={false}
           style={styles.viewport}
         >
+          {!tracker ? (
+            <Pressable
+              accessibilityLabel="Back to tracker examples"
+              accessibilityRole="button"
+              onPress={() => {
+                resetField();
+                setMode('gateway');
+              }}
+              style={styles.back}
+            >
+              <Icon
+                color={theme.colors.textSecondary}
+                icon={ArrowLeft01Icon}
+                size={18}
+              />
+              <Text style={[typography.label, { color: theme.colors.textSecondary }]}>
+                Examples
+              </Text>
+            </Pressable>
+          ) : null}
           <Field
             autoCapitalize="sentences"
             label="Name"
@@ -668,7 +712,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     flexDirection: 'row',
     gap: spacing.xs,
-    minHeight: 32,
+    minHeight: 44,
   },
   iconGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   iconChoice: {

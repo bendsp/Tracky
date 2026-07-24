@@ -1,93 +1,54 @@
-# Track V1 design QA
+# New Tracker gateway design QA
 
-## Comparison target
+**Source visual truth**
 
-- Source visual truth:
-  - `/Users/ben/.codex/generated_images/019f8a39-0788-7191-befa-0a514d5fa3d0/call_smHCW7RprwBDNRguazRCpY5O.png` (Track overview)
-  - `/Users/ben/.codex/generated_images/019f8a39-0788-7191-befa-0a514d5fa3d0/call_HzP6UBeAPUVAiHo2CJm0sbxS.png` (Add field)
-  - `/Users/ben/.codex/generated_images/019f8a39-0788-7191-befa-0a514d5fa3d0/call_OC6XFokluO6DsIJMBcKHCStR.png` (Tracker history)
-- Implementation screenshots:
-  - `/var/folders/_b/g355wxdn0xqc1f5cr2b49p8c0000gn/T/screenshot_optimized_c9468f8f-718f-4280-8b86-f61ca29d0af2.jpg` (overview)
-  - `/var/folders/_b/g355wxdn0xqc1f5cr2b49p8c0000gn/T/screenshot_optimized_e76583c6-d159-4ad8-8be5-e304e4cebe22.jpg` (Add field)
-  - `/var/folders/_b/g355wxdn0xqc1f5cr2b49p8c0000gn/T/screenshot_optimized_1833d103-cb22-437c-86d2-0195c5822541.jpg` (grouped history)
-- Combined comparison evidence:
-  - `/tmp/tracky-overview-comparison-final.png`
-  - `/tmp/tracky-add-field-comparison.png`
-  - `/tmp/tracky-history-comparison-final.png`
+- `/Users/ben/.codex/generated_images/019f94b8-ffd4-7dc3-b73b-69b26fb784e1/call_4uqe6TVSHPRsFPU4yIn68MJo.png`
+- Source pixels: 853 × 1844.
 
-## Viewport and normalization
+**Implementation evidence**
 
-- Device: Codex iPhone 17, iOS 26.2, dark appearance.
-- Implementation viewport: 368 × 800 pixels, captured directly from the real iOS Simulator.
-- Source images: 853 × 1844 pixels.
-- CSS size/device scale factor: not applicable to the native Simulator capture.
-- Density normalization: each 368 × 800 implementation capture was proportionally scaled to 1844 pixels high, producing an approximately 848 × 1844 comparison image beside the 853 × 1844 source. The five-pixel width difference is aspect-ratio rounding and was excluded from findings.
-- State:
-  - Overview: Drinking at 500 ml Today, Meditation visible, permanent New item, Track tab selected.
-  - Add field: Choice type selected with the new-choice input visible.
-  - History: Drinking at 500 ml Today, entries grouped into Today and Yesterday.
-- The Expo development-client Tools control is visible over the upper-right corner of native screenshots. It is development chrome, not Tracky UI, and is excluded from the product findings.
+- Dark: `/var/folders/_b/g355wxdn0xqc1f5cr2b49p8c0000gn/T/screenshot_optimized_98350d09-056e-47d1-bd91-289a22406b8c.jpg`
+- Light: `/var/folders/_b/g355wxdn0xqc1f5cr2b49p8c0000gn/T/screenshot_optimized_7877ad39-6326-42b3-b776-899956c3c7aa.jpg`
+- Implementation pixels: 368 × 800.
+- Runtime viewport: Codex iPhone 17 Simulator, iOS 26.2, 368 × 800 screenshot.
+- Density normalization: the source was proportionally downsampled to 370 × 800 for the combined comparison; the implementation remained at its native 368 × 800 capture.
+- Combined comparison: `/tmp/tracky-template-qa-comparison.png`.
+- State: initial New Tracker gateway, dark appearance. Light appearance was checked separately.
 
-## Full-view comparison evidence
+**Findings**
 
-- Overview preserves the reference hierarchy: tracker identity, large summary value, timeframe, restrained colored icon tile, sparse card surface, universal plus, and bottom navigation. The implementation intentionally uses the later-approved native Expo tab bar, compact native header, and permanent New row.
-- Add field preserves the reference task structure with Name, a Choice/Number/Date segmented control, choice creation, explanatory copy, and a single completion action. It intentionally uses the requested native bottom sheet rather than the full-screen reference.
-- History preserves the reference's text-first grouped chronology, summary identity, date sections, sparse entry rows, trailing values, and entry disclosure. The implementation intentionally uses the later-requested native fading header.
+- No actionable P0, P1, or P2 differences remain.
+- Fonts and typography: the implementation preserves Tracky’s current native typography and hierarchy. It is more compact than the conceptual reference but retains the same title, intro, section heading, row labels, and emphasis.
+- Spacing and layout rhythm: the grouped example rows and separate custom row match the reference hierarchy. Insets, separators, radii, and section spacing are native and consistent in both appearances.
+- Colors and visual tokens: the gateway uses Tracky’s semantic background, text, border, and cool-blue accent tokens in dark and light modes.
+- Image quality and asset fidelity: every visible icon comes from the existing Hugeicons integration. Water uses the droplet, Workouts uses the running figure, Reading uses the book, and Custom tracker uses the plus. No placeholder or code-drawn assets are present.
+- Copy and content: `New Tracker`, the approved intro sentence, the three approved template names, and `Custom tracker` match the handoff exactly.
+- Affordances: all four rows have native disclosure chevrons and full-row hit targets. The close button remains the existing accessible native-feeling control.
 
-## Focused region comparison evidence
+**Focused comparison**
 
-- Tracker cards: system typography has the same three-level hierarchy as the reference, Hugeicons stay optically centered, and accent colors remain restrained. The implementation is slightly denser by design, without clipping or cramped wrapping.
-- Add-field controls: the native segmented control, text field, and completion button have consistent tap sizing and spacing. No icons were introduced on fields or choices.
-- History rows: titles, times, values, notes, dividers, and disclosure affordances remain readable at native size. Today and Yesterday grouping was verified with real persisted entries.
-- No standalone image assets are required in these screens; all visible pictograms come from the established Hugeicons/SF Symbols component system rather than handcrafted SVG or CSS art.
+The full-view combined comparison is readable enough to inspect title hierarchy, exact copy, all four icons, row spacing, separators, radii, colors, and chevrons. No smaller focused crop was necessary.
 
-## Findings
+**Primary interactions tested**
 
-No actionable P0, P1, or P2 visual findings remain.
+- Water, Workouts, Reading, and Custom tracker each open the editable tracker form.
+- Template names, icons, fields, summary calculation, and timeframe arrive prefilled.
+- Editing the prefilled name works.
+- Closing a template draft creates nothing.
+- Creating Reading uses the normal tracker persistence path and survives app termination and relaunch.
+- Editing the created tracker opens the existing edit form directly rather than the template gateway.
+- Accessibility snapshots expose all four gateway rows as labeled buttons.
 
-- Typography: native San Francisco sizing and weights preserve the intended hierarchy; long values use one-line truncation where appropriate.
-- Spacing/layout: 18–20 point outer margins, consistent card padding, native safe-area handling, and the transparent navigation-bar inset avoid overlap and preserve the compact direction.
-- Colors/tokens: monochrome surfaces, semantic text tiers, and tracker-specific cool accents match the product direction and use reusable theme/tracker tokens.
-- Image quality/assets: no raster imagery is used; library icons are sharp and consistently stroked.
-- Copy/content: labels are functional and standalone. The universal optional note remains optional, fields and choices have no icons, and the New item is unambiguous.
-- Accessibility/state: named buttons, adjustable reorder handles, native date/time controls, destructive confirmation, and 44-point-or-larger primary targets are present.
+**Comparison history**
 
-## Comparison history
+1. Initial Simulator capture showed only Water and Workouts because the embedded native form had insufficient measured height. This was a P1 because two required actions were inaccessible.
+2. The gateway received a viewport-aware content height. The revised dark and light captures show Water, Workouts, Reading, and Custom tracker without clipping.
+3. Native interaction testing found the example-row hit region did not include the spacer area. A rectangular native content shape was added, and all three example rows then opened reliably from their full row target.
 
-### Iteration 1
+**Follow-up polish**
 
-- Earlier P2 finding: the Track title rendered as a separate large row while Edit occupied the bar above it, wasting vertical space and breaking the requested Teiimo-style native hierarchy.
-- Earlier evidence: `/var/folders/_b/g355wxdn0xqc1f5cr2b49p8c0000gn/T/screenshot_optimized_8d02f04a-da1d-4fbe-984f-d961fd371e1a.jpg`.
-- Fix: moved Track and tracker-history screens onto a shared native Stack configuration with `headerLargeTitle: false`, a transparent iOS header, the iOS 26 system progressive scroll-edge effect, and `contentInsetAdjustmentBehavior="automatic"` on both scroll views.
-- Post-fix evidence:
-  - `/var/folders/_b/g355wxdn0xqc1f5cr2b49p8c0000gn/T/screenshot_optimized_c9468f8f-718f-4280-8b86-f61ca29d0af2.jpg`
-  - `/var/folders/_b/g355wxdn0xqc1f5cr2b49p8c0000gn/T/screenshot_optimized_1833d103-cb22-437c-86d2-0195c5822541.jpg`
-- Result: title, back button, and Edit/Done now share the native bar; content scrolls beneath the system fade without being hidden.
+- P3: the approved concept uses a larger editorial title and taller rows. The implementation intentionally keeps Tracky’s existing compact native sheet typography and row density.
 
-## Primary interactions tested
+**Final result**
 
-- Fresh-state Drinking and Meditation seeds.
-- Create a tracker and add Choice, Number, and Date fields.
-- Add and immediately use a custom choice while logging.
-- Optional note, native occurrence date/time controls, and summary rendering.
-- Open and edit an entry.
-- Today/Yesterday history grouping.
-- Enter edit mode by long press.
-- Drag reorder, destructive delete confirmation, and persistence.
-- Global universal plus versus the Track screen's New tracker action.
-
-## Runtime checks
-
-- TypeScript: passed.
-- Expo Doctor: 20/20 checks passed.
-- Native iOS Simulator build: passed.
-- No app-owned runtime error remained after the final reorder animation fix.
-
-## Follow-up polish
-
-- P3: repeat visual QA with the development-client Tools control disabled or a release build when preparing App Store screenshots.
-- P3: populate Meditation with three real sessions for a marketing-style screenshot; this is sample state, not a product gap.
-
-## Final result
-
-passed
+final result: passed
