@@ -1,8 +1,10 @@
 import {
   Button,
   Host,
+  Text as NativeText,
   TextField,
   useNativeState,
+  VStack,
 } from '@expo/ui/swift-ui';
 import {
   accessibilityAddTraits,
@@ -28,9 +30,9 @@ import {
   tint,
 } from '@expo/ui/swift-ui/modifiers';
 import { useEffect, useRef } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 
-import { radius, spacing, type as typography } from '../design/theme';
+import { radius, spacing } from '../design/theme';
 import { useTracky } from '../store/TrackyProvider';
 
 type FieldProps = {
@@ -87,16 +89,22 @@ export function Field({
   };
 
   return (
-    <View style={styles.field}>
-      <Text style={[typography.label, { color: theme.colors.textSecondary }]}>
-        {label}
-      </Text>
-      <Host
-        colorScheme={theme.scheme}
-        matchContents={{ vertical: true }}
-        seedColor={theme.colors.accent}
-        style={styles.fullWidth}
-      >
+    <Host
+      colorScheme={theme.scheme}
+      matchContents={{ vertical: true }}
+      seedColor={theme.colors.accent}
+      style={styles.fullWidth}
+    >
+      <VStack alignment="leading" spacing={0}>
+        <NativeText
+          modifiers={[
+            font({ textStyle: 'caption', weight: 'semibold' }),
+            foregroundColor(theme.colors.textSecondary),
+            padding({ bottom: spacing.sm }),
+          ]}
+        >
+          {label}
+        </NativeText>
         <TextField
           axis={multiline ? 'vertical' : 'horizontal'}
           onTextChange={handleTextChange}
@@ -122,7 +130,7 @@ export function Field({
               horizontal: spacing.md,
               vertical: multiline ? spacing.md : spacing.sm,
             }),
-            frame({ minHeight: multiline ? 92 : 52 }),
+            frame({ maxWidth: 1000, minHeight: multiline ? 92 : 52 }),
             background(
               theme.colors.surface,
               shapes.roundedRectangle({
@@ -138,8 +146,8 @@ export function Field({
             }),
           ]}
         />
-      </Host>
-    </View>
+      </VStack>
+    </Host>
   );
 }
 
@@ -210,6 +218,5 @@ export function ChoiceChip({
 }
 
 const styles = StyleSheet.create({
-  field: { gap: spacing.xs },
   fullWidth: { width: '100%' },
 });

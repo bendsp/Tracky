@@ -49,6 +49,15 @@ The full-view combined comparison is readable enough to inspect title hierarchy,
 
 - P3: the approved concept uses a larger editorial title and taller rows. The implementation intentionally keeps Tracky’s existing compact native sheet typography and row density.
 
+**Count-label annotation regression**
+
+- Before: `/var/folders/_b/g355wxdn0xqc1f5cr2b49p8c0000gn/T/screenshot_optimized_fb5cc9be-8bb0-49b5-adf7-74130d194a9c.jpg`
+- After: `/var/folders/_b/g355wxdn0xqc1f5cr2b49p8c0000gn/T/screenshot_optimized_95c27d37-25fd-49f9-9df8-cf6a8c027ae0.jpg`
+- Combined comparison: `/tmp/tracky-count-label-spacing-comparison.png`.
+- The original React Native label and native SwiftUI text field were measured by separate layout systems, allowing the field surface to paint over the caption.
+- The shared field now renders its caption and input in one native SwiftUI vertical stack. The Count label and Name states both keep a clear native spacing rhythm, full-width field surface, and existing accessibility label.
+- No actionable P0, P1, P2, or P3 issue remains in the annotated region.
+
 **Final result**
 
 final result: passed
