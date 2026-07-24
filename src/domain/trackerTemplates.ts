@@ -8,15 +8,43 @@ import type {
 export type TrackerTemplateId = 'water' | 'workouts' | 'reading';
 
 export type TrackerTemplateOption = {
+  color: string;
   id: TrackerTemplateId;
   icon: TrackerIconName;
   name: string;
 };
 
+function accentNamed(label: (typeof activityAccents)[number]['label']) {
+  const accent = activityAccents.find((option) => option.label === label);
+  if (!accent) throw new Error(`Missing tracker template accent: ${label}`);
+  return accent.value;
+}
+
+const templateColors = {
+  water: accentNamed('Blue'),
+  workouts: accentNamed('Coral'),
+  reading: accentNamed('Green'),
+} satisfies Record<TrackerTemplateId, string>;
+
 export const trackerTemplateOptions: readonly TrackerTemplateOption[] = [
-  { id: 'water', icon: 'droplet', name: 'Water' },
-  { id: 'workouts', icon: 'activity', name: 'Workouts' },
-  { id: 'reading', icon: 'book', name: 'Reading' },
+  {
+    color: templateColors.water,
+    id: 'water',
+    icon: 'droplet',
+    name: 'Water',
+  },
+  {
+    color: templateColors.workouts,
+    id: 'workouts',
+    icon: 'activity',
+    name: 'Workouts',
+  },
+  {
+    color: templateColors.reading,
+    id: 'reading',
+    icon: 'book',
+    name: 'Reading',
+  },
 ];
 
 function defaultFieldId() {
@@ -27,14 +55,12 @@ export function createTrackerTemplateDraft(
   templateId: TrackerTemplateId,
   createFieldId: () => string = defaultFieldId,
 ): TrackerDraft {
-  const color = activityAccents[0].value;
-
   if (templateId === 'water') {
     const amountFieldId = createFieldId();
     return {
       name: 'Water',
       icon: 'droplet',
-      color,
+      color: templateColors.water,
       fields: [
         {
           id: amountFieldId,
@@ -61,7 +87,7 @@ export function createTrackerTemplateDraft(
     return {
       name: 'Workouts',
       icon: 'activity',
-      color,
+      color: templateColors.workouts,
       fields: [workoutTypeField],
       summary: {
         calculation: 'count',
@@ -80,7 +106,7 @@ export function createTrackerTemplateDraft(
   return {
     name: 'Reading',
     icon: 'book',
-    color,
+    color: templateColors.reading,
     fields: [pagesField],
     summary: {
       calculation: 'count',

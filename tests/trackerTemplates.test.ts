@@ -15,11 +15,11 @@ function sequentialIds() {
 describe('tracker templates', () => {
   test('exposes exactly the approved gateway examples', () => {
     assert.deepEqual(
-      trackerTemplateOptions.map(({ id, name }) => ({ id, name })),
+      trackerTemplateOptions.map(({ color, id, name }) => ({ color, id, name })),
       [
-        { id: 'water', name: 'Water' },
-        { id: 'workouts', name: 'Workouts' },
-        { id: 'reading', name: 'Reading' },
+        { color: '#3578F6', id: 'water', name: 'Water' },
+        { color: '#C85D4A', id: 'workouts', name: 'Workouts' },
+        { color: '#3D8B5A', id: 'reading', name: 'Reading' },
       ],
     );
   });
@@ -29,6 +29,7 @@ describe('tracker templates', () => {
 
     assert.equal(draft.name, 'Water');
     assert.equal(draft.icon, 'droplet');
+    assert.equal(draft.color, '#3578F6');
     assert.deepEqual(draft.fields, [
       {
         id: 'field_1',
@@ -50,6 +51,7 @@ describe('tracker templates', () => {
 
     assert.equal(draft.name, 'Workouts');
     assert.equal(draft.icon, 'activity');
+    assert.equal(draft.color, '#C85D4A');
     assert.deepEqual(draft.fields, [
       {
         id: 'field_1',
@@ -71,6 +73,7 @@ describe('tracker templates', () => {
 
     assert.equal(draft.name, 'Reading');
     assert.equal(draft.icon, 'book');
+    assert.equal(draft.color, '#3D8B5A');
     assert.deepEqual(draft.fields, [
       {
         id: 'field_1',

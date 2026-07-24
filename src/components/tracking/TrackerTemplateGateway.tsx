@@ -21,7 +21,7 @@ import {
   scrollContentBackground,
   shapes,
 } from '@expo/ui/swift-ui/modifiers';
-import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { spacing, type as typography } from '../../design/theme';
 import {
@@ -40,15 +40,9 @@ export function TrackerTemplateGateway({
   onSelectTemplate: (templateId: TrackerTemplateId) => void;
 }) {
   const { theme } = useTracky();
-  const { height } = useWindowDimensions();
 
   return (
-    <View
-      style={[
-        styles.container,
-        { height: Math.min(640, Math.max(440, height - 160)) },
-      ]}
-    >
+    <View style={styles.container}>
       <Text style={[typography.body, styles.intro, { color: theme.colors.textSecondary }]}>
         Track anything that matters to you. Start with a simple example, or create
         your own.
@@ -70,7 +64,7 @@ export function TrackerTemplateGateway({
                 accessibilityHint={`Opens an editable ${template.name} tracker`}
                 icon={
                   <TrackerIcon
-                    color={theme.colors.accent}
+                    color={template.color}
                     name={template.icon}
                     size={27}
                   />
@@ -159,6 +153,7 @@ function TemplateRow({
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
     gap: spacing.sm,
   },
   intro: {

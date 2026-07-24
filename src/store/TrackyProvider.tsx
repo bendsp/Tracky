@@ -84,60 +84,6 @@ function id(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
 
-function freshState(): PersistedTrackyState {
-  const timestamp = new Date().toISOString();
-  const drinkingId = id('tracker');
-  const drinkTypeFieldId = id('field');
-  const amountFieldId = id('field');
-  const meditationId = id('tracker');
-  return {
-    ...emptyState(),
-    trackers: [
-      {
-        id: drinkingId,
-        name: 'Drinking',
-        icon: 'droplet',
-        color: '#3578F6',
-        fields: [
-          {
-            id: drinkTypeFieldId,
-            name: 'Drink',
-            type: 'choice',
-            choices: ['Water', 'Coffee', 'Tea'],
-          },
-          {
-            id: amountFieldId,
-            name: 'Amount',
-            type: 'number',
-            unit: 'ml',
-          },
-        ],
-        summary: {
-          calculation: 'sum',
-          timeframe: 'today',
-          fieldId: amountFieldId,
-        },
-        createdAt: timestamp,
-        updatedAt: timestamp,
-      },
-      {
-        id: meditationId,
-        name: 'Meditation',
-        icon: 'meditation',
-        color: '#8A5CC7',
-        fields: [],
-        summary: {
-          calculation: 'count',
-          timeframe: 'thisWeek',
-          countLabel: 'sessions',
-        },
-        createdAt: timestamp,
-        updatedAt: timestamp,
-      },
-    ],
-  };
-}
-
 const TrackyContext = createContext<TrackyContextValue | null>(null);
 
 export function TrackyProvider({ children }: PropsWithChildren) {
@@ -162,7 +108,7 @@ export function TrackyProvider({ children }: PropsWithChildren) {
       if (stored) {
         setState(parseAndMigrateTrackyData(stored).state);
       } else {
-        setState(freshState());
+        setState(emptyState());
       }
       setStorageReady(true);
     } catch (error) {

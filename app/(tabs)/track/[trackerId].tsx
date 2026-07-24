@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
   },
   entryCopy: { flex: 1, gap: spacing.xxs },
   empty: { alignItems: 'center', gap: spacing.xs, paddingTop: spacing.xxl },
-  formViewport: { maxHeight: 620 },
+  formViewport: { flex: 1 },
   formContent: { paddingBottom: spacing.lg },
   missing: {
     alignItems: 'center',
