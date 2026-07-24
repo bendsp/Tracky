@@ -46,7 +46,7 @@ function TabsContent() {
         />
         <NativeTabs.Trigger.Label>Track</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="index">
+      <NativeTabs.Trigger name="calendar">
         <NativeTabs.Trigger.Icon sf="calendar" />
         <NativeTabs.Trigger.Label>{calendarLabel}</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>

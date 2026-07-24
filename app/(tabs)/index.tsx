@@ -1,5 +1,5 @@
-import { HybridCalendarScreen } from '../../src/components/calendar/HybridCalendarScreen';
+import { Redirect } from 'expo-router';
 
-export default function CalendarScreen() {
-  return <HybridCalendarScreen />;
+export default function InitialTabRedirect() {
+  return <Redirect href="/track" />;
 }

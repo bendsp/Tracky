@@ -58,10 +58,11 @@ export function Sheet({
             ...(size === 'large' ? [presentationDetents(['large'])] : []),
           ]}
         >
-          <RNHostView matchContents>
+          <RNHostView matchContents={size === 'content'}>
             <View
               style={[
                 styles.sheet,
+                size === 'large' && styles.largeSheet,
                 {
                   backgroundColor: theme.colors.backgroundRaised,
                   width,
@@ -102,6 +103,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
   },
+  largeSheet: { flex: 1 },
   heading: {
     alignItems: 'center',
     flexDirection: 'row',
