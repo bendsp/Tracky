@@ -1,12 +1,16 @@
 import { Add01Icon } from '@hugeicons/core-free-icons';
 import { ListItem } from '@expo/ui';
 import {
+  Button as NativeButton,
   Host,
   HStack,
   Image as NativeImage,
   List,
+  Menu,
+  RNHostView,
   Spacer as NativeSpacer,
   Text as NativeText,
+  VStack,
 } from '@expo/ui/swift-ui';
 import {
   accessibilityLabel as nativeAccessibilityLabel,
@@ -21,8 +25,6 @@ import {
   listRowSeparator,
   listStyle,
   moveDisabled,
-  onLongPressGesture,
-  onTapGesture,
   padding,
   scrollContentBackground,
   shapes,
@@ -254,19 +256,61 @@ function TrackerListItem({
   const summary = trackerSummary(tracker, events, now);
 
   return (
-    <ListItem
-      leading={
-        <View
-          style={[
-            styles.icon,
-            {
-              backgroundColor: colorWithAlpha(tracker.color, 0.12),
-              borderColor: colorWithAlpha(tracker.color, 0.25),
-            },
-          ]}
-        >
-          <TrackerIcon color={tracker.color} name={tracker.icon} size={25} />
-        </View>
+    <Menu
+      label={
+        <HStack spacing={12}>
+          <RNHostView matchContents>
+            <View
+              style={[
+                styles.icon,
+                {
+                  backgroundColor: colorWithAlpha(tracker.color, 0.12),
+                  borderColor: colorWithAlpha(tracker.color, 0.25),
+                },
+              ]}
+            >
+              <TrackerIcon color={tracker.color} name={tracker.icon} size={25} />
+            </View>
+          </RNHostView>
+          <VStack alignment="leading" spacing={2}>
+            <NativeText
+              modifiers={[
+                font({ textStyle: 'headline', weight: 'semibold' }),
+                foregroundStyle(theme.colors.text),
+              ]}
+            >
+              {tracker.name}
+            </NativeText>
+            {editing ? null : (
+              <NativeText
+                modifiers={[
+                  font({ textStyle: 'caption', weight: 'medium' }),
+                  foregroundStyle(theme.colors.textSecondary),
+                ]}
+              >
+                {summary.detail}
+              </NativeText>
+            )}
+          </VStack>
+          <NativeSpacer />
+          {editing ? null : (
+            <HStack spacing={spacing.xs}>
+              <NativeText
+                modifiers={[
+                  font({ textStyle: 'title3', weight: 'bold' }),
+                  foregroundStyle(theme.colors.text),
+                ]}
+              >
+                {summary.value}
+              </NativeText>
+              <NativeImage
+                color={theme.colors.textTertiary}
+                size={14}
+                systemName="chevron.right"
+              />
+            </HStack>
+          )}
+        </HStack>
       }
       modifiers={[
         tag(tracker.id),
@@ -294,52 +338,17 @@ function TrackerListItem({
         }),
         deleteDisabled(!editing),
         moveDisabled(!editing),
-        onLongPressGesture(onEnterEditing, 0.45),
-        onTapGesture(() => {
-          if (!editing) onOpen();
-        }),
       ]}
-      supportingText={
-        editing ? undefined : (
-          <NativeText
-            modifiers={[
-              font({ textStyle: 'caption', weight: 'medium' }),
-              foregroundStyle(theme.colors.textSecondary),
-            ]}
-          >
-            {summary.detail}
-          </NativeText>
-        )
-      }
-      trailing={
-        editing ? undefined : (
-          <HStack spacing={spacing.xs}>
-            <NativeText
-              modifiers={[
-                font({ textStyle: 'title3', weight: 'bold' }),
-                foregroundStyle(theme.colors.text),
-              ]}
-            >
-              {summary.value}
-            </NativeText>
-            <NativeImage
-              color={theme.colors.textTertiary}
-              size={14}
-              systemName="chevron.right"
-            />
-          </HStack>
-        )
-      }
+      onPrimaryAction={() => {
+        if (!editing) onOpen();
+      }}
     >
-      <NativeText
-        modifiers={[
-          font({ textStyle: 'headline', weight: 'semibold' }),
-          foregroundStyle(theme.colors.text),
-        ]}
-      >
-        {tracker.name}
-      </NativeText>
-    </ListItem>
+      <NativeButton
+        label="Edit trackers"
+        onPress={onEnterEditing}
+        systemImage="line.3.horizontal"
+      />
+    </Menu>
   );
 }
 
