@@ -79,6 +79,16 @@ function isFiniteDate(value: unknown): value is string {
   return isString(value) && Number.isFinite(new Date(value).getTime());
 }
 
+function isLocalDate(value: unknown): value is string {
+  if (!isString(value) || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return (
+    Number.isFinite(date.getTime()) &&
+    date.toISOString().slice(0, 10) === value
+  );
+}
+
 export function isHexColor(value: unknown): value is HexColor {
   return isString(value) && /^#[0-9A-Fa-f]{6}$/.test(value);
 }
@@ -219,7 +229,7 @@ function readEntryValue(
       : undefined;
   }
   if (field.type === 'choice') return isString(value) ? value : undefined;
-  return isFiniteDate(value) ? value : undefined;
+  return isLocalDate(value) ? value : undefined;
 }
 
 function readEvent(
@@ -359,6 +369,20 @@ function validateCurrentState(value: unknown): PersistedTrackyState {
   if (!hasUniqueIds(validActivities)) malformed('Activity IDs are invalid');
   if (validActivities.filter((item) => item.endedAt === null).length > 1) {
     malformed('More than one activity is currently active');
+  }
+  const chronologicalActivities = [...validActivities].sort(
+    (left, right) =>
+      new Date(left.startedAt).getTime() - new Date(right.startedAt).getTime(),
+  );
+  for (let index = 1; index < chronologicalActivities.length; index += 1) {
+    const previous = chronologicalActivities[index - 1];
+    const current = chronologicalActivities[index];
+    const previousEnd = previous.endedAt
+      ? new Date(previous.endedAt).getTime()
+      : Number.POSITIVE_INFINITY;
+    if (new Date(current.startedAt).getTime() < previousEnd) {
+      malformed('Activity times overlap');
+    }
   }
 
   const trackers = value.trackers.map(readTracker);

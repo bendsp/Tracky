@@ -1,4 +1,4 @@
-import { Stack } from 'expo-router';
+import { Stack, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -8,6 +8,7 @@ import { spacing, type as typography } from '../src/design/theme';
 import { useTracky, TrackyProvider } from '../src/store/TrackyProvider';
 
 function RootNavigator() {
+  const pathname = usePathname();
   const {
     hydrated,
     loadError,
@@ -66,7 +67,7 @@ function RootNavigator() {
           headerShown: false,
         }}
       />
-      <UniversalAdd />
+      {pathname === '/privacy' ? null : <UniversalAdd />}
       {saveError ? (
         <Pressable
           accessibilityLabel="Local save failed. Tap to retry."

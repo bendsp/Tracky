@@ -309,6 +309,102 @@ describe('Tracky backup compatibility', () => {
     assert.equal(storage.writes, 0);
   });
 
+  test('date field values require a real YYYY-MM-DD local date', () => {
+    const stateWithDateField: PersistedTrackyState = {
+      ...currentState,
+      trackers: [
+        {
+          ...currentState.trackers[0],
+          fields: [{ id: 'field_date', name: 'Date', type: 'date' }],
+          summary: {
+            calculation: 'count',
+            timeframe: 'today',
+            countLabel: 'entries',
+          },
+        },
+      ],
+      events: [
+        {
+          ...currentState.events[0],
+          values: { field_date: '2026-07-21' },
+        },
+      ],
+    };
+
+    assert.deepEqual(
+      parseAndMigrateTrackyData(stateWithDateField).state,
+      stateWithDateField,
+    );
+    assert.throws(
+      () =>
+        parseAndMigrateTrackyData({
+          ...stateWithDateField,
+          events: [
+            {
+              ...stateWithDateField.events[0],
+              values: { field_date: '2026-07-21T10:30:00.000Z' },
+            },
+          ],
+        }),
+      TrackyDataError,
+    );
+    assert.throws(
+      () =>
+        parseAndMigrateTrackyData({
+          ...stateWithDateField,
+          events: [
+            {
+              ...stateWithDateField.events[0],
+              values: { field_date: '2026-02-30' },
+            },
+          ],
+        }),
+      TrackyDataError,
+    );
+  });
+
+  test('overlapping activity intervals are rejected', () => {
+    const overlappingState: PersistedTrackyState = {
+      ...currentState,
+      activities: [
+        ...currentState.activities,
+        {
+          ...currentState.activities[0],
+          id: 'activity_overlap',
+          startedAt: '2026-07-21T10:30:00.000Z',
+          endedAt: '2026-07-21T11:30:00.000Z',
+        },
+      ],
+    };
+
+    assert.throws(
+      () => parseAndMigrateTrackyData(overlappingState),
+      (error: unknown) =>
+        error instanceof TrackyDataError &&
+        error.message === 'Activity times overlap',
+    );
+  });
+
+  test('adjacent activity intervals remain valid', () => {
+    const adjacentState: PersistedTrackyState = {
+      ...currentState,
+      activities: [
+        ...currentState.activities,
+        {
+          ...currentState.activities[0],
+          id: 'activity_adjacent',
+          startedAt: '2026-07-21T11:00:00.000Z',
+          endedAt: '2026-07-21T12:00:00.000Z',
+        },
+      ],
+    };
+
+    assert.deepEqual(
+      parseAndMigrateTrackyData(adjacentState).state,
+      adjacentState,
+    );
+  });
+
   test('rollback verification failure is reported explicitly', async () => {
     const replacement: PersistedTrackyState = {
       ...currentState,

@@ -1,6 +1,6 @@
 {
   "name": "tracky",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "main": "expo-router/entry",
   "dependencies": {
     "@expo/ui": "~57.0.7",

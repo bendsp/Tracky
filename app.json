@@ -2,7 +2,7 @@
   "expo": {
     "name": "Tracky",
     "slug": "tracky",
-    "version": "0.1.0",
+    "version": "1.0.0",
     "platforms": [
       "ios"
     ],
@@ -12,7 +12,11 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/Tracky.icon",
+      "buildNumber": "1",
       "bundleIdentifier": "com.bendsp.tracky",
+      "config": {
+        "usesNonExemptEncryption": false
+      },
       "supportsTablet": false
     },
     "plugins": [
