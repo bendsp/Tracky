@@ -73,7 +73,7 @@ const currentState: PersistedTrackyState = {
     },
   ],
   appearance: 'system',
-  schemaVersion: 3,
+  schemaVersion: 4,
 };
 
 class MemoryStorage implements TrackyStringStorage {
@@ -108,20 +108,45 @@ describe('Tracky backup compatibility', () => {
     assert.equal(parsed.metadata.exportedAt, '2026-07-21T12:00:00.000Z');
   });
 
-  test('real schema 2 fixture migrates sequentially to schema 3', () => {
+  test('real schema 2 fixture migrates sequentially to schema 4', () => {
     const fixture = readFileSync(
       new URL('./fixtures/tracky-schema-v2.json', import.meta.url),
       'utf8',
     );
     const parsed = parseAndMigrateTrackyData(fixture);
 
-    assert.equal(parsed.state.schemaVersion, 3);
+    assert.equal(parsed.state.schemaVersion, 4);
     assert.equal(parsed.state.trackers[0].fields[0].type, 'number');
     assert.equal(parsed.state.events[0].values.field_migrated_tracker_legacy_water, 500);
     assert.equal(
       parsed.state.activities[0].activityTypeId,
       'activity_type_migrated_activity_legacy_work',
     );
+  });
+
+  test('schema 3 data migrates to schema 4 without changing tracker data', () => {
+    const schemaThree = {
+      ...currentState,
+      schemaVersion: 3,
+    };
+    const parsed = parseAndMigrateTrackyData(schemaThree);
+
+    assert.equal(parsed.state.schemaVersion, 4);
+    assert.deepEqual(parsed.state.trackers, currentState.trackers);
+  });
+
+  test('current schema accepts every newly added tracker icon', () => {
+    for (const icon of ['computer', 'food', 'music', 'sleep'] as const) {
+      const parsed = parseAndMigrateTrackyData({
+        ...currentState,
+        trackers: currentState.trackers.map((tracker) => ({
+          ...tracker,
+          icon,
+        })),
+      });
+
+      assert.equal(parsed.state.trackers[0].icon, icon);
+    }
   });
 
   test('unversioned on-device legacy data remains supported', () => {
@@ -135,7 +160,7 @@ describe('Tracky backup compatibility', () => {
     delete fixture.exportedAt;
 
     const parsed = parseAndMigrateTrackyData(fixture);
-    assert.equal(parsed.state.schemaVersion, 3);
+    assert.equal(parsed.state.schemaVersion, 4);
     assert.equal(parsed.state.events.length, 1);
   });
 

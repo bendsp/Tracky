@@ -33,6 +33,10 @@ export const trackerIconNames = [
   'book',
   'leaf',
   'star',
+  'computer',
+  'food',
+  'music',
+  'sleep',
 ] as const;
 
 export type TrackerIconName = (typeof trackerIconNames)[number];
@@ -105,13 +109,13 @@ export type TrackyData = {
 
 export type PersistedTrackyState = TrackyData & {
   appearance: AppearanceMode;
-  schemaVersion: 3;
+  schemaVersion: 4;
 };
 
 export type TrackyBackupEnvelope = {
   format: 'tracky-backup';
   formatVersion: 1;
-  dataSchemaVersion: 3;
+  dataSchemaVersion: 4;
   appVersion: string;
   exportedAt: ISODateTime;
   payload: PersistedTrackyState;

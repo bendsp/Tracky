@@ -16,7 +16,7 @@ import {
   type TrackyBackupPreview,
 } from '../domain/models';
 
-export const CURRENT_DATA_SCHEMA_VERSION = 3;
+export const CURRENT_DATA_SCHEMA_VERSION = 4;
 export const TRACKY_BACKUP_FORMAT_VERSION = 1;
 
 type UnknownRecord = Record<string, unknown>;
@@ -567,8 +567,12 @@ function migrateVersionTwoToThree(candidate: UnknownRecord): UnknownRecord {
     trackers,
     events,
     appearance: appearanceFrom(candidate),
-    schemaVersion: CURRENT_DATA_SCHEMA_VERSION,
+    schemaVersion: 3,
   };
+}
+
+function migrateVersionThreeToFour(candidate: UnknownRecord): UnknownRecord {
+  return { ...candidate, schemaVersion: 4 };
 }
 
 const migrations: Record<
@@ -577,6 +581,7 @@ const migrations: Record<
 > = {
   1: migrateVersionOneToTwo,
   2: migrateVersionTwoToThree,
+  3: migrateVersionThreeToFour,
 };
 
 function readSchemaVersion(candidate: UnknownRecord) {

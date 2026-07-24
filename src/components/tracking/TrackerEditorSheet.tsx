@@ -40,7 +40,6 @@ import { useTracky } from '../../store/TrackyProvider';
 import { ChoiceChip, Field, PrimaryButton } from '../Form';
 import { Icon } from '../Icon';
 import {
-  NativeColorPicker,
   NativeMenuPicker,
   NativeSegmentedPicker,
 } from '../NativeControls';
@@ -60,6 +59,10 @@ const timeframeOptions = [
   { label: 'Today', value: 'today' },
   { label: 'This week', value: 'thisWeek' },
 ] as const;
+
+const trackerAccentOptions = activityAccents.filter(
+  (option) => option.label !== 'Graphite',
+);
 
 function makeFieldId() {
   return `field_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -492,7 +495,7 @@ export function TrackerEditorSheet({
               Accent color
             </Text>
             <View style={styles.colorGrid}>
-              {activityAccents.map((option) => {
+              {trackerAccentOptions.map((option) => {
                 const selected = draft.color === option.value;
                 return (
                   <Pressable
@@ -526,13 +529,6 @@ export function TrackerEditorSheet({
                 );
               })}
             </View>
-            <NativeColorPicker
-              label="Custom accent color"
-              onChange={(color) =>
-                setDraft((current) => ({ ...current, color: color as `#${string}` }))
-              }
-              value={draft.color}
-            />
           </View>
           <View style={styles.section}>
             <View style={styles.sectionHeading}>

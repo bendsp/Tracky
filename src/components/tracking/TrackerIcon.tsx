@@ -1,9 +1,13 @@
 import {
   BookOpen01Icon,
   Coffee02Icon,
+  ComputerIcon,
   DropletIcon,
   FavouriteIcon,
   Leaf01Icon,
+  MusicNote01Icon,
+  Restaurant01Icon,
+  SleepingIcon,
   SparklesIcon,
   WorkoutRunIcon,
   Yoga01Icon,
@@ -22,6 +26,10 @@ const icons: Record<TrackerIconName, IconSvgElement> = {
   book: BookOpen01Icon,
   leaf: Leaf01Icon,
   star: SparklesIcon,
+  computer: ComputerIcon,
+  food: Restaurant01Icon,
+  music: MusicNote01Icon,
+  sleep: SleepingIcon,
 };
 
 export const trackerIconOptions: {
@@ -36,6 +44,10 @@ export const trackerIconOptions: {
   { label: 'Reading', value: 'book' },
   { label: 'Nature', value: 'leaf' },
   { label: 'General', value: 'star' },
+  { label: 'Computer', value: 'computer' },
+  { label: 'Food', value: 'food' },
+  { label: 'Music', value: 'music' },
+  { label: 'Sleep', value: 'sleep' },
 ];
 
 export function TrackerIcon({
