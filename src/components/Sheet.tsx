@@ -6,6 +6,7 @@ import {
   RNHostView,
 } from '@expo/ui/swift-ui';
 import {
+  ignoreSafeArea,
   presentationBackground,
   presentationDetents,
   presentationDragIndicator,
@@ -40,6 +41,7 @@ export function Sheet({
   return (
     <Host
       colorScheme={theme.scheme}
+      ignoreSafeArea={size === 'large' ? 'container' : undefined}
       pointerEvents="box-none"
       seedColor={theme.colors.accent}
       style={styles.host}
@@ -55,7 +57,12 @@ export function Sheet({
           modifiers={[
             presentationBackground(theme.colors.backgroundRaised),
             presentationDragIndicator('hidden'),
-            ...(size === 'large' ? [presentationDetents(['large'])] : []),
+            ...(size === 'large'
+              ? [
+                  presentationDetents(['large']),
+                  ignoreSafeArea({ edges: 'bottom', regions: 'container' }),
+                ]
+              : []),
           ]}
         >
           <RNHostView matchContents={size === 'content'}>
@@ -103,7 +110,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
   },
-  largeSheet: { flex: 1 },
+  largeSheet: { flex: 1, paddingBottom: 0 },
   heading: {
     alignItems: 'center',
     flexDirection: 'row',

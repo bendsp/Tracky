@@ -696,7 +696,7 @@ export function TrackerEditorSheet({
 
 const styles = StyleSheet.create({
   viewport: { flex: 1 },
-  form: { gap: spacing.lg, paddingBottom: spacing.lg },
+  form: { gap: spacing.lg, paddingBottom: spacing.xxxl },
   section: { gap: spacing.sm },
   sectionHeading: {
     alignItems: 'center',

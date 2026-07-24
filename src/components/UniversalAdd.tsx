@@ -441,7 +441,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   eventViewport: { flex: 1 },
-  eventForm: { gap: spacing.lg, paddingBottom: spacing.lg },
+  eventForm: { gap: spacing.lg, paddingBottom: spacing.xxxl },
   activityListViewport: { maxHeight: 312 },
   activityList: { gap: spacing.xs },
   activityOption: {
