@@ -1,8 +1,4 @@
-import {
-  Cancel01Icon,
-  MoreHorizontalIcon,
-  Tick02Icon,
-} from '@hugeicons/core-free-icons';
+import { Tick02Icon } from '@hugeicons/core-free-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
@@ -71,18 +67,15 @@ export default function TrackerDetailSheet() {
   if (!tracker) {
     return (
       <NativeSheetScreen style={styles.missing}>
-        <Stack.Screen
-          options={{
-            headerLeft: () => (
-              <HeaderIcon
-                accessibilityLabel="Close"
-                icon={Cancel01Icon}
-                onPress={() => router.back()}
-              />
-            ),
-            title: 'Tracker',
-          }}
-        />
+        <Stack.Screen options={{ title: 'Tracker' }} />
+        <Stack.Toolbar placement="left">
+          <Stack.Toolbar.Button
+            accessibilityLabel="Close"
+            icon="xmark"
+            onPress={() => router.back()}
+            separateBackground
+          />
+        </Stack.Toolbar>
         <Text style={[typography.section, { color: theme.colors.text }]}>
           Tracker not found
         </Text>
@@ -113,28 +106,26 @@ export default function TrackerDetailSheet() {
 
   return (
     <NativeSheetScreen>
-      <Stack.Screen
-        options={{
-          headerLeft: () => (
-            <HeaderIcon
-              accessibilityLabel="Close tracker details"
-              icon={Cancel01Icon}
-              onPress={() => router.back()}
-            />
-          ),
-          headerRight: () => (
-            <HeaderIcon
-              accessibilityLabel={`Edit ${tracker.name}`}
-              icon={MoreHorizontalIcon}
-              onPress={() => {
-                tapHaptic();
-                setEditorOpen(true);
-              }}
-            />
-          ),
-          title: tracker.name,
-        }}
-      />
+      <Stack.Screen options={{ title: tracker.name }} />
+      <Stack.Toolbar placement="left">
+        <Stack.Toolbar.Button
+          accessibilityLabel="Close tracker details"
+          icon="xmark"
+          onPress={() => router.back()}
+          separateBackground
+        />
+      </Stack.Toolbar>
+      <Stack.Toolbar placement="right">
+        <Stack.Toolbar.Button
+          accessibilityLabel={`Edit ${tracker.name}`}
+          icon="ellipsis"
+          onPress={() => {
+            tapHaptic();
+            setEditorOpen(true);
+          }}
+          separateBackground
+        />
+      </Stack.Toolbar>
 
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
@@ -423,41 +414,12 @@ function MonthHistory({
   );
 }
 
-function HeaderIcon({
-  accessibilityLabel,
-  icon,
-  onPress,
-}: {
-  accessibilityLabel: string;
-  icon: typeof Cancel01Icon;
-  onPress: () => void;
-}) {
-  const { theme } = useTracky();
-  return (
-    <Pressable
-      accessibilityLabel={accessibilityLabel}
-      accessibilityRole="button"
-      hitSlop={10}
-      onPress={onPress}
-      style={styles.headerIcon}
-    >
-      <Icon color={theme.colors.text} icon={icon} size={21} />
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: {
     gap: spacing.xl,
     padding: spacing.md,
     paddingBottom: 128,
-  },
-  headerIcon: {
-    alignItems: 'center',
-    height: 40,
-    justifyContent: 'center',
-    width: 40,
   },
   statusCard: {
     alignItems: 'center',
