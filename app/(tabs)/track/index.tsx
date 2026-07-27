@@ -16,10 +16,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '../../../src/components/Icon';
 import { GlassButton } from '../../../src/components/GlassButton';
+import { ScreenHeader } from '../../../src/components/Screen';
 import { TrackerEditorSheet } from '../../../src/components/tracking/TrackerEditorSheet';
 import { TrackerIcon } from '../../../src/components/tracking/TrackerIcon';
 import {
   radius,
+  resolveHabitColor,
   spacing,
   type as typography,
   type Theme,
@@ -78,32 +80,21 @@ export default function TodayScreen() {
         }}
       />
 
-      <View
-        style={[
-          styles.header,
-          {
-            height: insets.top + 64,
-            paddingTop: insets.top,
-          },
-        ]}
-      >
-        <Text
-          accessibilityRole="header"
-          style={[styles.headerTitle, { color: theme.colors.text }]}
-        >
-          Tracky
-        </Text>
-        <GlassButton
-          accessibilityLabel="Create a new tracker"
-          compact
-          icon={Add01Icon}
-          onPress={() => {
-            tapHaptic();
-            setEditorOpen(true);
-          }}
-          prominent
-        />
-      </View>
+      <ScreenHeader
+        title="Tracky"
+        trailing={
+          <GlassButton
+            accessibilityLabel="Create a new tracker"
+            compact
+            icon={Add01Icon}
+            onPress={() => {
+              tapHaptic();
+              setEditorOpen(true);
+            }}
+            prominent
+          />
+        }
+      />
 
       <ScrollView
         contentInsetAdjustmentBehavior="never"
@@ -229,7 +220,12 @@ function TrackerRow({
             styles.trackerIcon,
             {
               backgroundColor: theme.colors.backgroundRaised,
-              borderColor: theme.colors.border,
+              borderColor: status.complete
+                ? resolveHabitColor(tracker.color, theme.dark)
+                : theme.colors.border,
+              borderWidth: status.complete
+                ? 3
+                : StyleSheet.hairlineWidth,
             },
           ]}
         >
@@ -313,17 +309,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
   },
-  header: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: '600',
-    letterSpacing: -0.4,
-  },
   trackerList: { gap: spacing.sm },
   row: {
     alignItems: 'center',
@@ -346,7 +331,6 @@ const styles = StyleSheet.create({
   trackerIcon: {
     alignItems: 'center',
     borderRadius: radius.pill,
-    borderWidth: StyleSheet.hairlineWidth,
     height: 56,
     justifyContent: 'center',
     width: 56,

@@ -502,8 +502,12 @@ function SettingsRow({
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   content: { paddingBottom: 150 },
-  inner: { paddingHorizontal: spacing.lg },
-  group: { borderRadius: radius.md, borderWidth: 1, overflow: 'hidden' },
+  inner: { paddingHorizontal: spacing.md },
+  group: {
+    borderRadius: radius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: 'hidden',
+  },
   row: {
     alignItems: 'center',
     flexDirection: 'row',

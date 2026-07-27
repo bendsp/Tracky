@@ -15,6 +15,7 @@ import { TrackerEditorSheet } from '../src/components/tracking/TrackerEditorShee
 import { TrackerIcon } from '../src/components/tracking/TrackerIcon';
 import {
   radius,
+  resolveHabitColor,
   spacing,
   type as typography,
 } from '../src/design/theme';
@@ -147,7 +148,12 @@ export default function TrackerDetailSheet() {
               styles.heroIcon,
               {
                 backgroundColor: theme.colors.backgroundRaised,
-                borderColor: theme.colors.border,
+                borderColor: completedToday
+                  ? resolveHabitColor(tracker.color, theme.dark)
+                  : theme.colors.border,
+                borderWidth: completedToday
+                  ? 3
+                  : StyleSheet.hairlineWidth,
               },
             ]}
           >
@@ -433,7 +439,6 @@ const styles = StyleSheet.create({
   heroIcon: {
     alignItems: 'center',
     borderRadius: radius.pill,
-    borderWidth: StyleSheet.hairlineWidth,
     height: 52,
     justifyContent: 'center',
     width: 52,

@@ -96,7 +96,10 @@ export function TrackerIconPickerSheet({
               },
             ]}
           >
-            <Text style={[typography.section, { color: theme.colors.text }]}>
+            <Text
+              accessibilityRole="header"
+              style={[typography.groupTitle, { color: theme.colors.text }]}
+            >
               {group.title}
             </Text>
             <View style={styles.grid}>

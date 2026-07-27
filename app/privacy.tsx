@@ -97,7 +97,7 @@ function PolicySection({
     <View style={styles.section}>
       <Text
         accessibilityRole="header"
-        style={[typography.section, { color: theme.colors.text }]}
+        style={[typography.articleTitle, { color: theme.colors.text }]}
       >
         {title}
       </Text>

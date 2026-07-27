@@ -19,6 +19,44 @@ export const activityAccents = [
   { label: 'Graphite', value: '#62666D' },
 ] as const;
 
+export const habitColors = [
+  { label: 'Coral', value: '#FF6B5E' },
+  { label: 'Orange', value: '#FF9F0A' },
+  { label: 'Gold', value: '#E7B416' },
+  { label: 'Lime', value: '#8CCF35' },
+  { label: 'Green', value: '#30B566' },
+  { label: 'Mint', value: '#35C8A3' },
+  { label: 'Teal', value: '#2AA7A1' },
+  { label: 'Blue', value: '#0A84FF' },
+  { label: 'Indigo', value: '#5E5CE6' },
+  { label: 'Violet', value: '#AF52DE' },
+  { label: 'Pink', value: '#E85D9E' },
+  { label: 'Neutral', value: '#000000' },
+] as const;
+
+export const neutralHabitColor = habitColors[11].value;
+export const defaultHabitColor = neutralHabitColor;
+
+export function normalizeHabitColor(
+  color: `#${string}`,
+): `#${string}` {
+  return color.toUpperCase() === accent.primary.toUpperCase()
+    ? neutralHabitColor
+    : color;
+}
+
+export function resolveHabitColor(
+  color: `#${string}`,
+  dark: boolean,
+): `#${string}` {
+  const normalized = normalizeHabitColor(color);
+  return normalized === neutralHabitColor
+    ? dark
+      ? '#FAFAFA'
+      : '#292929'
+    : normalized;
+}
+
 export function colorWithAlpha(hex: string, alpha: number) {
   const normalized = hex.replace('#', '');
   if (!/^[0-9A-Fa-f]{6}$/.test(normalized)) return hex;
@@ -49,9 +87,19 @@ export const radius = {
 } as const;
 
 export const type = {
-  eyebrow: { fontSize: 12, fontWeight: '500' as const, letterSpacing: -0.15 },
-  title: { fontSize: 24, fontWeight: '500' as const, letterSpacing: -0.15 },
+  eyebrow: { fontSize: 12, fontWeight: '600' as const, letterSpacing: -0.15 },
+  title: { fontSize: 28, fontWeight: '600' as const, letterSpacing: -0.4 },
   section: { fontSize: 24, fontWeight: '500' as const, letterSpacing: -0.15 },
+  articleTitle: {
+    fontSize: 20,
+    fontWeight: '600' as const,
+    letterSpacing: -0.15,
+  },
+  groupTitle: {
+    fontSize: 17,
+    fontWeight: '600' as const,
+    letterSpacing: -0.15,
+  },
   cardTitle: { fontSize: 14, fontWeight: '500' as const, letterSpacing: -0.15 },
   body: {
     fontSize: 14,

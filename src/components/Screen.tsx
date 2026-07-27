@@ -17,7 +17,12 @@ export function ScreenHeader({
 
   return (
     <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
-      <Text style={[typography.title, { color: theme.colors.text }]}>{title}</Text>
+      <Text
+        accessibilityRole="header"
+        style={[typography.title, { color: theme.colors.text }]}
+      >
+        {title}
+      </Text>
       {trailing}
     </View>
   );
@@ -30,7 +35,12 @@ export function SectionTitle({
   const { theme } = useTracky();
   return (
     <View style={styles.section}>
-      <Text style={[typography.section, { color: theme.colors.text }]}>{children}</Text>
+      <Text
+        accessibilityRole="header"
+        style={[typography.groupTitle, { color: theme.colors.text }]}
+      >
+        {children}
+      </Text>
       {meta ? (
         <Text style={[typography.caption, { color: theme.colors.textSecondary }]}>
           {meta}
@@ -46,7 +56,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingBottom: spacing.lg,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
   },
   section: {
     alignItems: 'baseline',

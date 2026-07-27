@@ -102,6 +102,7 @@ export function Sheet({
                     onPress={onClose}
                   />
                   <Text
+                    accessibilityRole="header"
                     pointerEvents="none"
                     style={[
                       styles.centeredTitle,
@@ -123,6 +124,7 @@ export function Sheet({
               ) : (
                 <View style={styles.heading}>
                   <Text
+                    accessibilityRole="header"
                     style={[
                       typography.section,
                       styles.headingCopy,

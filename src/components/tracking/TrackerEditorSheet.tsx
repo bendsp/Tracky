@@ -1,15 +1,34 @@
-import { PencilEdit02Icon } from '@hugeicons/core-free-icons';
+import {
+  PencilEdit02Icon,
+  Tick02Icon,
+} from '@hugeicons/core-free-icons';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
-import { accent, radius, spacing } from '../../design/theme';
+import {
+  defaultHabitColor,
+  habitColors,
+  normalizeHabitColor,
+  radius,
+  resolveHabitColor,
+  spacing,
+  type as typography,
+} from '../../design/theme';
 import type {
   Tracker,
   TrackerDraft,
 } from '../../domain/models';
 import { useTracky } from '../../store/TrackyProvider';
+import { selectionHaptic } from '../../utils/haptics';
 import { Field } from '../Form';
 import { GlassButton } from '../GlassButton';
+import { Icon } from '../Icon';
 import { Sheet } from '../Sheet';
 import { TrackerIcon } from './TrackerIcon';
 import { TrackerIconPickerSheet } from './TrackerIconPickerSheet';
@@ -26,7 +45,7 @@ function newDraft(): TrackerDraft {
   return {
     name: '',
     icon: 'star',
-    color: accent.primary,
+    color: defaultHabitColor,
     fields: [],
     summary: baseSummary(),
   };
@@ -36,7 +55,7 @@ function editableDraft(tracker: Tracker): TrackerDraft {
   return {
     name: tracker.name,
     icon: tracker.icon,
-    color: tracker.color,
+    color: normalizeHabitColor(tracker.color),
     fields: tracker.fields.map((field) =>
       field.type === 'choice'
         ? { ...field, choices: [...field.choices] }
@@ -70,13 +89,11 @@ export function TrackerEditorSheet({
     const simpleDraft: TrackerDraft = tracker
       ? {
           ...draft,
-          color: tracker.color,
           fields: tracker.fields,
           summary: tracker.summary,
         }
       : {
           ...draft,
-          color: accent.primary,
           fields: [],
           summary: baseSummary(),
         };
@@ -144,6 +161,52 @@ export function TrackerEditorSheet({
           placeholder="Read, stretch, call Mum…"
           value={draft.name}
         />
+
+        <View style={styles.colorField}>
+          <Text style={[typography.eyebrow, { color: theme.colors.textSecondary }]}>
+            Color
+          </Text>
+          <View style={styles.colorGrid}>
+            {habitColors.map((option) => {
+              const selected = draft.color === option.value;
+              const swatchColor = resolveHabitColor(option.value, theme.dark);
+              return (
+                <Pressable
+                  accessibilityLabel={`${option.label} habit color`}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  key={option.value}
+                  onPress={() => {
+                    selectionHaptic();
+                    setDraft((current) => ({
+                      ...current,
+                      color: option.value,
+                    }));
+                  }}
+                  style={({ pressed }) => [
+                    styles.colorChoice,
+                    {
+                      backgroundColor: swatchColor,
+                      borderColor: selected
+                        ? theme.colors.text
+                        : 'transparent',
+                      opacity: pressed ? 0.68 : 1,
+                    },
+                  ]}
+                >
+                  {selected ? (
+                    <Icon
+                      color={swatchForeground(swatchColor)}
+                      icon={Tick02Icon}
+                      size={22}
+                      strokeWidth={2.5}
+                    />
+                  ) : null}
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
       </ScrollView>
       <TrackerIconPickerSheet
         onClose={() => setIconPickerOpen(false)}
@@ -158,6 +221,15 @@ export function TrackerEditorSheet({
       />
     </Sheet>
   );
+}
+
+function swatchForeground(hex: string) {
+  const value = Number.parseInt(hex.slice(1), 16);
+  const red = (value >> 16) & 255;
+  const green = (value >> 8) & 255;
+  const blue = value & 255;
+  const luminance = (red * 299 + green * 587 + blue * 114) / 255000;
+  return luminance > 0.64 ? '#0A0A0A' : '#FFFFFF';
 }
 
 const styles = StyleSheet.create({
@@ -187,5 +259,19 @@ const styles = StyleSheet.create({
     bottom: 0,
     position: 'absolute',
     right: 0,
+  },
+  colorField: { gap: spacing.sm },
+  colorGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  colorChoice: {
+    alignItems: 'center',
+    borderRadius: radius.sm,
+    borderWidth: 3,
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
   },
 });

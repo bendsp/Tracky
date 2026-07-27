@@ -178,7 +178,7 @@ export function TrackerEntryForm({
                     styles.inlineButton,
                     {
                       backgroundColor: newChoices[field.id]?.trim()
-                        ? tracker.color
+                        ? theme.colors.accent
                         : theme.colors.surfaceMuted,
                     },
                   ]}
