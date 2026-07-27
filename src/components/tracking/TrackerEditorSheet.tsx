@@ -1,4 +1,4 @@
-import { MoreHorizontalIcon } from '@hugeicons/core-free-icons';
+import { PencilEdit02Icon } from '@hugeicons/core-free-icons';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
@@ -128,7 +128,7 @@ export function TrackerEditorSheet({
             <GlassButton
               accessibilityLabel="Choose tracker icon"
               compact
-              icon={MoreHorizontalIcon}
+              icon={PencilEdit02Icon}
               onPress={() => setIconPickerOpen(true)}
             />
           </View>
