@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 
 import { Icon } from '../src/components/Icon';
+import { NativeSheetScreen } from '../src/components/NativeSheetScreen';
 import { TrackerIcon } from '../src/components/tracking/TrackerIcon';
 import { radius, spacing, type as typography } from '../src/design/theme';
 import { eventsInTimeframe } from '../src/domain/tracking';
@@ -28,10 +29,7 @@ export default function LogTrackerSheet() {
   };
 
   return (
-    <View
-      collapsable={false}
-      style={[styles.screen, { backgroundColor: theme.colors.background }]}
-    >
+    <NativeSheetScreen>
       <Stack.Screen
         options={{
           headerLeft: () => (
@@ -172,12 +170,11 @@ export default function LogTrackerSheet() {
           </Text>
         )}
       </ScrollView>
-    </View>
+    </NativeSheetScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1 },
   headerIcon: {
     alignItems: 'center',
     height: 40,

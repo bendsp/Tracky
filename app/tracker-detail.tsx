@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 
 import { Icon } from '../src/components/Icon';
+import { NativeSheetScreen } from '../src/components/NativeSheetScreen';
 import { TrackerEditorSheet } from '../src/components/tracking/TrackerEditorSheet';
 import { TrackerIcon } from '../src/components/tracking/TrackerIcon';
 import {
@@ -69,7 +70,7 @@ export default function TrackerDetailSheet() {
 
   if (!tracker) {
     return (
-      <View style={[styles.missing, { backgroundColor: theme.colors.background }]}>
+      <NativeSheetScreen style={styles.missing}>
         <Stack.Screen
           options={{
             headerLeft: () => (
@@ -85,7 +86,7 @@ export default function TrackerDetailSheet() {
         <Text style={[typography.section, { color: theme.colors.text }]}>
           Tracker not found
         </Text>
-      </View>
+      </NativeSheetScreen>
     );
   }
 
@@ -111,10 +112,7 @@ export default function TrackerDetailSheet() {
   };
 
   return (
-    <View
-      collapsable={false}
-      style={[styles.screen, { backgroundColor: theme.colors.background }]}
-    >
+    <NativeSheetScreen>
       <Stack.Screen
         options={{
           headerLeft: () => (
@@ -330,7 +328,7 @@ export default function TrackerDetailSheet() {
         tracker={tracker}
         visible={editorOpen}
       />
-    </View>
+    </NativeSheetScreen>
   );
 }
 
@@ -449,7 +447,6 @@ function HeaderIcon({
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1 },
   scroll: { flex: 1 },
   content: {
     gap: spacing.xl,

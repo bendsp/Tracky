@@ -4,6 +4,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { spacing, type as typography } from '../src/design/theme';
+import { nativeSheetOptions } from '../src/navigation/nativeSheetOptions';
 import { useTracky, TrackyProvider } from '../src/store/TrackyProvider';
 import { RevenueCatProvider } from '../src/subscriptions/RevenueCatProvider';
 
@@ -57,6 +58,8 @@ function RootNavigator() {
     );
   }
 
+  const formSheetOptions = nativeSheetOptions(theme);
+
   return (
     <>
       <StatusBar style={theme.dark ? 'light' : 'dark'} />
@@ -69,35 +72,11 @@ function RootNavigator() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen
           name="tracker-detail"
-          options={{
-            contentStyle: { backgroundColor: theme.colors.background },
-            headerBackVisible: false,
-            headerShadowVisible: false,
-            headerShown: true,
-            headerStyle: { backgroundColor: theme.colors.background },
-            headerTintColor: theme.colors.text,
-            presentation: 'formSheet',
-            sheetAllowedDetents: [1],
-            sheetCornerRadius: 40,
-            sheetGrabberVisible: false,
-            sheetInitialDetentIndex: 0,
-          }}
+          options={formSheetOptions}
         />
         <Stack.Screen
           name="log-tracker"
-          options={{
-            contentStyle: { backgroundColor: theme.colors.background },
-            headerBackVisible: false,
-            headerShadowVisible: false,
-            headerShown: true,
-            headerStyle: { backgroundColor: theme.colors.background },
-            headerTintColor: theme.colors.text,
-            presentation: 'formSheet',
-            sheetAllowedDetents: [1],
-            sheetCornerRadius: 40,
-            sheetGrabberVisible: false,
-            sheetInitialDetentIndex: 0,
-          }}
+          options={formSheetOptions}
         />
       </Stack>
       {saveError ? (
