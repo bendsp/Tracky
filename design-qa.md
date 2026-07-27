@@ -87,5 +87,8 @@ The grouped tracker rows, completion controls, sheet header, consistency card, m
 - Primary interactions tested: opening the second native sheet, selecting Computer and confirming, reopening, selecting Music and cancelling, and verifying Computer remains selected.
 - Full-view comparison: no actionable P0, P1, or P2 mismatch remains for the requested preview, picker, rounded input, and two-sheet interaction.
 - Focused region comparison: the four-panel comparison leaves the header, preview, grouped icon cards, and selection treatments readable without a separate crop.
+- Stacked-sheet implementation screenshot: `/var/folders/_b/g355wxdn0xqc1f5cr2b49p8c0000gn/T/screenshot_optimized_c970bc2b-5392-438a-9853-5ad0343d4a29.jpg`.
+- Stacked-sheet behavior: Choose Icon is now physically nested inside New Tracker's native sheet content, so iOS presents it as a second sheet while preserving and recessing the first presentation. Dismissing or confirming the icon picker removes only the top sheet and returns to the same draft.
+- Stacked-sheet interaction tested: entered `Draft survives`, opened Choose Icon, selected Heart, confirmed, and verified the New Tracker sheet remained presented with the draft text intact. The runtime accessibility snapshot contained both sheet hierarchies while the picker was open, confirming this is a native presentation stack rather than a screen replacement.
 
 final result: passed

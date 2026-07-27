@@ -86,70 +86,65 @@ export function TrackerEditorSheet({
   };
 
   return (
-    <>
-      <Sheet
-        confirmDisabled={!draft.name.trim()}
-        confirmLabel={tracker ? 'Save' : 'Add'}
-        onClose={() => {
-          if (!iconPickerOpen) onClose();
-        }}
-        onConfirm={save}
-        size="large"
-        title={tracker ? 'Edit Tracker' : 'New Tracker'}
-        visible={visible && !iconPickerOpen}
+    <Sheet
+      confirmDisabled={!draft.name.trim()}
+      confirmLabel={tracker ? 'Save' : 'Add'}
+      onClose={onClose}
+      onConfirm={save}
+      size="large"
+      title={tracker ? 'Edit Tracker' : 'New Tracker'}
+      visible={visible}
+    >
+      <ScrollView
+        automaticallyAdjustKeyboardInsets
+        contentContainerStyle={styles.form}
+        keyboardDismissMode="interactive"
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        style={styles.viewport}
       >
-        <ScrollView
-          automaticallyAdjustKeyboardInsets
-          contentContainerStyle={styles.form}
-          keyboardDismissMode="interactive"
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          style={styles.viewport}
-        >
-          <View style={styles.iconPreviewArea}>
-            <Pressable
-              accessibilityHint="Opens the icon picker"
+        <View style={styles.iconPreviewArea}>
+          <Pressable
+            accessibilityHint="Opens the icon picker"
+            accessibilityLabel="Choose tracker icon"
+            accessibilityRole="button"
+            onPress={() => setIconPickerOpen(true)}
+            style={({ pressed }) => [
+              styles.iconPreview,
+              {
+                backgroundColor: theme.colors.surfaceMuted,
+                borderColor: theme.colors.border,
+                opacity: pressed ? 0.72 : 1,
+              },
+            ]}
+          >
+            <TrackerIcon
+              color={theme.colors.text}
+              name={draft.icon}
+              size={50}
+            />
+          </Pressable>
+          <View style={styles.iconMenu}>
+            <GlassButton
               accessibilityLabel="Choose tracker icon"
-              accessibilityRole="button"
+              compact
+              icon={MoreHorizontalIcon}
               onPress={() => setIconPickerOpen(true)}
-              style={({ pressed }) => [
-                styles.iconPreview,
-                {
-                  backgroundColor: theme.colors.surfaceMuted,
-                  borderColor: theme.colors.border,
-                  opacity: pressed ? 0.72 : 1,
-                },
-              ]}
-            >
-              <TrackerIcon
-                color={theme.colors.text}
-                name={draft.icon}
-                size={50}
-              />
-            </Pressable>
-            <View style={styles.iconMenu}>
-              <GlassButton
-                accessibilityLabel="Choose tracker icon"
-                compact
-                icon={MoreHorizontalIcon}
-                onPress={() => setIconPickerOpen(true)}
-              />
-            </View>
+            />
           </View>
+        </View>
 
-          <Field
-            autoCapitalize="sentences"
-            label="Name"
-            onChangeText={(name) =>
-              setDraft((current) => ({ ...current, name }))
-            }
-            pill
-            placeholder="Read, stretch, call Mum…"
-            value={draft.name}
-          />
-        </ScrollView>
-      </Sheet>
-
+        <Field
+          autoCapitalize="sentences"
+          label="Name"
+          onChangeText={(name) =>
+            setDraft((current) => ({ ...current, name }))
+          }
+          pill
+          placeholder="Read, stretch, call Mum…"
+          value={draft.name}
+        />
+      </ScrollView>
       <TrackerIconPickerSheet
         onClose={() => setIconPickerOpen(false)}
         onSelect={(icon) =>
@@ -159,9 +154,9 @@ export function TrackerEditorSheet({
           }))
         }
         selected={draft.icon}
-        visible={visible && iconPickerOpen}
+        visible={iconPickerOpen}
       />
-    </>
+    </Sheet>
   );
 }
 
