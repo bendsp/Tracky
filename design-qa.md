@@ -72,4 +72,20 @@ The grouped tracker rows, completion controls, sheet header, consistency card, m
 - Full-view comparison: no actionable P0, P1, or P2 mismatch remains for the requested header and sheet-surface treatment.
 - Focused region comparison: the full-height normalized comparison keeps the header and first form controls readable, so a separate crop was unnecessary.
 
+**Icon Picker Refinement**
+
+- Source visual truth: `/var/folders/_b/g355wxdn0xqc1f5cr2b49p8c0000gn/T/codex-clipboard-310e6918-0e06-4790-895d-774c686a97e8.png` and `/var/folders/_b/g355wxdn0xqc1f5cr2b49p8c0000gn/T/codex-clipboard-b3efccbd-a971-442e-ad3e-4cba0373ddf6.png`.
+- Implementation screenshots: `/var/folders/_b/g355wxdn0xqc1f5cr2b49p8c0000gn/T/screenshot_optimized_b08e447f-416e-4aaa-a255-6a752bbffed1.jpg` and `/var/folders/_b/g355wxdn0xqc1f5cr2b49p8c0000gn/T/screenshot_optimized_539c62dc-86bf-4429-9d20-e44bcf3c0a86.jpg`.
+- Combined comparison: `/Users/ben/Code/Tracky/design-qa-icon-picker.jpg`.
+- Viewport and normalization: both 1206 × 2622 references were normalized to the existing 368 × 800 Codex iPhone 17 Simulator viewport; implementation captures were native 368 × 800.
+- State: blank New Tracker editor with a selected Computer preview, followed by the Choose Icon sheet with the General selection active.
+- Fonts and typography: compact centered headers and native labels preserve the reference hierarchy with SF typography.
+- Spacing and layout rhythm: the icon preview now leads the form, the Name field uses a continuous pill radius, and the icon picker uses spacious grouped cards with circular choices.
+- Colors and visual tokens: the monochrome raised sheet, grouped surfaces, white icons, and selection ring stay within Tracky’s approved restrained system.
+- Image and icon fidelity: every visible icon comes from Tracky’s existing Hugeicons mapping. The picker intentionally exposes the app’s current 12-icon vocabulary rather than inventing unsupported tracker types to match the reference count.
+- Copy and content: the redundant daily-check-in helper is removed. Categories are named General, Wellness, and Work & Interests.
+- Primary interactions tested: opening the second native sheet, selecting Computer and confirming, reopening, selecting Music and cancelling, and verifying Computer remains selected.
+- Full-view comparison: no actionable P0, P1, or P2 mismatch remains for the requested preview, picker, rounded input, and two-sheet interaction.
+- Focused region comparison: the four-panel comparison leaves the header, preview, grouped icon cards, and selection treatments readable without a separate crop.
+
 final result: passed

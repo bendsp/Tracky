@@ -1,22 +1,18 @@
+import { MoreHorizontalIcon } from '@hugeicons/core-free-icons';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import {
-  accent,
-  radius,
-  spacing,
-  type as typography,
-} from '../../design/theme';
+import { accent, radius, spacing } from '../../design/theme';
 import type {
   Tracker,
   TrackerDraft,
-  TrackerIconName,
 } from '../../domain/models';
 import { useTracky } from '../../store/TrackyProvider';
-import { selectionHaptic } from '../../utils/haptics';
 import { Field } from '../Form';
+import { GlassButton } from '../GlassButton';
 import { Sheet } from '../Sheet';
-import { TrackerIcon, trackerIconOptions } from './TrackerIcon';
+import { TrackerIcon } from './TrackerIcon';
+import { TrackerIconPickerSheet } from './TrackerIconPickerSheet';
 
 function baseSummary(): TrackerDraft['summary'] {
   return {
@@ -61,9 +57,11 @@ export function TrackerEditorSheet({
 }) {
   const { createTracker, theme, updateTracker } = useTracky();
   const [draft, setDraft] = useState<TrackerDraft>(newDraft);
+  const [iconPickerOpen, setIconPickerOpen] = useState(false);
 
   useEffect(() => {
     if (!visible) return;
+    setIconPickerOpen(false);
     setDraft(tracker ? editableDraft(tracker) : newDraft());
   }, [tracker, visible]);
 
@@ -88,115 +86,111 @@ export function TrackerEditorSheet({
   };
 
   return (
-    <Sheet
-      confirmDisabled={!draft.name.trim()}
-      confirmLabel={tracker ? 'Save' : 'Add'}
-      onClose={onClose}
-      onConfirm={save}
-      size="large"
-      title={tracker ? 'Edit Tracker' : 'New Tracker'}
-      visible={visible}
-    >
-      <ScrollView
-        automaticallyAdjustKeyboardInsets
-        contentContainerStyle={styles.form}
-        keyboardDismissMode="interactive"
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-        style={styles.viewport}
+    <>
+      <Sheet
+        confirmDisabled={!draft.name.trim()}
+        confirmLabel={tracker ? 'Save' : 'Add'}
+        onClose={() => {
+          if (!iconPickerOpen) onClose();
+        }}
+        onConfirm={save}
+        size="large"
+        title={tracker ? 'Edit Tracker' : 'New Tracker'}
+        visible={visible && !iconPickerOpen}
       >
-        <Field
-          autoCapitalize="sentences"
-          label="Name"
-          onChangeText={(name) =>
-            setDraft((current) => ({ ...current, name }))
-          }
-          placeholder="Read, stretch, call Mum…"
-          value={draft.name}
-        />
-
-        <View style={styles.section}>
-          <Text
-            style={[typography.label, { color: theme.colors.textSecondary }]}
-          >
-            Icon
-          </Text>
-          <View style={styles.iconGrid}>
-            {trackerIconOptions.map((option) => {
-              const selected = draft.icon === option.value;
-              return (
-                <Pressable
-                  accessibilityLabel={`${option.label} icon`}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected }}
-                  key={option.value}
-                  onPress={() => {
-                    selectionHaptic();
-                    setDraft((current) => ({
-                      ...current,
-                      icon: option.value as TrackerIconName,
-                    }));
-                  }}
-                  style={[
-                    styles.iconChoice,
-                    {
-                      backgroundColor: selected
-                        ? theme.colors.accent
-                        : theme.colors.surface,
-                      borderColor: selected
-                        ? theme.colors.accent
-                        : theme.colors.border,
-                    },
-                  ]}
-                >
-                  <TrackerIcon
-                    color={
-                      selected
-                        ? theme.colors.onAccent
-                        : theme.colors.textSecondary
-                    }
-                    name={option.value}
-                    size={21}
-                  />
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-
-        <Text
-          style={[
-            typography.body,
-            styles.helper,
-            { color: theme.colors.textSecondary },
-          ]}
+        <ScrollView
+          automaticallyAdjustKeyboardInsets
+          contentContainerStyle={styles.form}
+          keyboardDismissMode="interactive"
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          style={styles.viewport}
         >
-          Each tracker is a simple daily check-in.
-        </Text>
-      </ScrollView>
-    </Sheet>
+          <View style={styles.iconPreviewArea}>
+            <Pressable
+              accessibilityHint="Opens the icon picker"
+              accessibilityLabel="Choose tracker icon"
+              accessibilityRole="button"
+              onPress={() => setIconPickerOpen(true)}
+              style={({ pressed }) => [
+                styles.iconPreview,
+                {
+                  backgroundColor: theme.colors.surfaceMuted,
+                  borderColor: theme.colors.border,
+                  opacity: pressed ? 0.72 : 1,
+                },
+              ]}
+            >
+              <TrackerIcon
+                color={theme.colors.text}
+                name={draft.icon}
+                size={50}
+              />
+            </Pressable>
+            <View style={styles.iconMenu}>
+              <GlassButton
+                accessibilityLabel="Choose tracker icon"
+                compact
+                icon={MoreHorizontalIcon}
+                onPress={() => setIconPickerOpen(true)}
+              />
+            </View>
+          </View>
+
+          <Field
+            autoCapitalize="sentences"
+            label="Name"
+            onChangeText={(name) =>
+              setDraft((current) => ({ ...current, name }))
+            }
+            pill
+            placeholder="Read, stretch, call Mum…"
+            value={draft.name}
+          />
+        </ScrollView>
+      </Sheet>
+
+      <TrackerIconPickerSheet
+        onClose={() => setIconPickerOpen(false)}
+        onSelect={(icon) =>
+          setDraft((current) => ({
+            ...current,
+            icon,
+          }))
+        }
+        selected={draft.icon}
+        visible={visible && iconPickerOpen}
+      />
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   viewport: { flex: 1 },
   form: {
-    gap: spacing.lg,
+    gap: spacing.xl,
     paddingBottom: spacing.xxxl,
   },
-  section: { gap: spacing.sm },
-  iconGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  iconChoice: {
+  iconPreviewArea: {
     alignItems: 'center',
-    borderRadius: radius.sm,
-    borderWidth: StyleSheet.hairlineWidth,
-    height: 48,
+    alignSelf: 'center',
+    height: 132,
     justifyContent: 'center',
-    width: 48,
+    marginBottom: spacing.md,
+    marginTop: spacing.xl,
+    width: 132,
   },
-  helper: { lineHeight: 20 },
+  iconPreview: {
+    alignItems: 'center',
+    borderRadius: radius.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+    height: 112,
+    justifyContent: 'center',
+    width: 112,
+  },
+  iconMenu: {
+    bottom: 0,
+    position: 'absolute',
+    right: 0,
+  },
 });

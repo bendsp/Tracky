@@ -44,6 +44,7 @@ type FieldProps = {
   multiline?: boolean;
   onChangeText: (value: string) => void;
   onSubmitEditing?: (value: string) => void;
+  pill?: boolean;
   placeholder?: string;
   returnKeyType?: 'done';
   value: string;
@@ -57,6 +58,7 @@ export function Field({
   multiline = false,
   onChangeText,
   onSubmitEditing,
+  pill = false,
   placeholder,
   returnKeyType,
   value,
@@ -135,13 +137,13 @@ export function Field({
             background(
               theme.colors.surface,
               shapes.roundedRectangle({
-                cornerRadius: radius.md,
+                cornerRadius: pill ? radius.pill : radius.md,
                 roundedCornerStyle: 'continuous',
               }),
             ),
             strokeBorder({
               color: theme.colors.border,
-              cornerRadius: radius.md,
+              cornerRadius: pill ? radius.pill : radius.md,
               shape: 'roundedRectangle',
               style: { lineWidth: 1 },
             }),

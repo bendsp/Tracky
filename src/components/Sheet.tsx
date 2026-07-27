@@ -1,4 +1,5 @@
 import { Cancel01Icon } from '@hugeicons/core-free-icons';
+import type { IconSvgElement } from '@hugeicons/react-native';
 import {
   BottomSheet,
   Group,
@@ -24,19 +25,25 @@ import { useTracky } from '../store/TrackyProvider';
 import { GlassButton } from './GlassButton';
 
 export function Sheet({
+  cancelIcon,
   cancelLabel = 'Cancel',
   children,
   confirmDisabled = false,
+  confirmIcon,
   confirmLabel,
+  confirmProminent = false,
   onClose,
   onConfirm,
   size = 'content',
   title,
   visible,
 }: PropsWithChildren<{
+  cancelIcon?: IconSvgElement;
   cancelLabel?: string;
   confirmDisabled?: boolean;
+  confirmIcon?: IconSvgElement;
   confirmLabel?: string;
+  confirmProminent?: boolean;
   onClose: () => void;
   onConfirm?: () => void;
   size?: 'content' | 'large';
@@ -90,7 +97,8 @@ export function Sheet({
                   <GlassButton
                     accessibilityLabel={cancelLabel}
                     compact
-                    label={cancelLabel}
+                    icon={cancelIcon}
+                    label={cancelIcon ? undefined : cancelLabel}
                     onPress={onClose}
                   />
                   <Text
@@ -106,8 +114,10 @@ export function Sheet({
                     accessibilityLabel={confirmLabel!}
                     compact
                     disabled={confirmDisabled}
-                    label={confirmLabel}
+                    icon={confirmIcon}
+                    label={confirmIcon ? undefined : confirmLabel}
                     onPress={onConfirm!}
+                    prominent={confirmProminent}
                   />
                 </View>
               ) : (
