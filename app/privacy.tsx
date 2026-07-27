@@ -38,11 +38,20 @@ export default function PrivacyScreen() {
         <PolicySection title="Your data stays yours">
           Tracky stores your activity timeline, trackers, entries, optional notes,
           and appearance preference in the app’s local storage on this device. It
-          does not require an account and does not send or sync that data to Ben
-          Desprets or any third party.
+          does not require an account and does not send or sync your tracker,
+          activity, entry, or note content to Ben Desprets or any third party.
         </PolicySection>
 
-        <PolicySection title="No tracking">
+        <PolicySection title="Purchases and Tracky Plus">
+          Tracky uses RevenueCat to offer and manage Tracky Plus purchases.
+          RevenueCat receives an anonymous app user identifier, purchase and
+          subscription information, and limited technical information such as
+          device type, operating system, and app version. Tracky does not send
+          your tracker names, fields, activities, entries, or notes to RevenueCat.
+          Apple processes App Store payments.
+        </PolicySection>
+
+        <PolicySection title="No behavioral tracking">
           Tracky contains no advertising, behavioral analytics, or background
           surveillance. It does not request access to Health, Location, Photos,
           Contacts, or other protected personal-data permissions.
@@ -69,7 +78,7 @@ export default function PrivacyScreen() {
         </PolicySection>
 
         <Text style={[typography.caption, { color: theme.colors.textSecondary }]}>
-          Last updated July 24, 2026
+          Last updated July 27, 2026
         </Text>
       </ScrollView>
     </View>

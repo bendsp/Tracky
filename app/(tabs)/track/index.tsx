@@ -1,231 +1,197 @@
-import { Add01Icon } from '@hugeicons/core-free-icons';
-import { ListItem } from '@expo/ui';
 import {
-  Button as NativeButton,
-  Host,
-  HStack,
-  Image as NativeImage,
-  List,
-  Menu,
-  RNHostView,
-  Spacer as NativeSpacer,
-  Text as NativeText,
-  VStack,
-} from '@expo/ui/swift-ui';
-import {
-  accessibilityLabel as nativeAccessibilityLabel,
-  background,
-  deleteDisabled,
-  environment,
-  font,
-  foregroundStyle,
-  frame,
-  listRowBackground,
-  listRowInsets,
-  listRowSeparator,
-  listStyle,
-  moveDisabled,
-  padding,
-  scrollContentBackground,
-  shapes,
-  strokeBorder,
-  tag,
-} from '@expo/ui/swift-ui/modifiers';
-import * as Haptics from 'expo-haptics';
+  Add01Icon,
+  ArrowRight01Icon,
+  Tick02Icon,
+} from '@hugeicons/core-free-icons';
 import { Stack, useRouter } from 'expo-router';
-import { useRef, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '../../../src/components/Icon';
+import { GlassButton } from '../../../src/components/GlassButton';
 import { TrackerEditorSheet } from '../../../src/components/tracking/TrackerEditorSheet';
 import { TrackerIcon } from '../../../src/components/tracking/TrackerIcon';
 import {
-  colorWithAlpha,
   radius,
   spacing,
+  type as typography,
   type Theme,
 } from '../../../src/design/theme';
 import type { TrackedEvent, Tracker } from '../../../src/domain/models';
-import { trackerSummary } from '../../../src/domain/tracking';
+import { eventsInTimeframe } from '../../../src/domain/tracking';
 import { useTimeframeNow } from '../../../src/hooks/useTimeframeNow';
 import { useTracky } from '../../../src/store/TrackyProvider';
+import { successHaptic, tapHaptic } from '../../../src/utils/haptics';
 
-export default function TrackScreen() {
+function trackerStatus(
+  tracker: Tracker,
+  events: TrackedEvent[],
+  now: Date,
+) {
+  const todayEvents = eventsInTimeframe(
+    events.filter((event) => event.trackerId === tracker.id),
+    'today',
+    now,
+  );
+
+  return {
+    complete: todayEvents.length > 0,
+    detail: todayEvents.length ? 'Done today' : 'Not done',
+  };
+}
+
+export default function TodayScreen() {
   const router = useRouter();
-  const { deleteTracker, events, reorderTrackers, theme, trackers } = useTracky();
-  const summaryNow = useTimeframeNow();
-  const [editing, setEditing] = useState(false);
+  const insets = useSafeAreaInsets();
+  useTimeframeNow();
+  const { events, theme, toggleTrackerCheckIn, trackers } = useTracky();
   const [editorOpen, setEditorOpen] = useState(false);
-  const longPressEditStartedAt = useRef(0);
 
-  const enterEditing = () => {
-    if (editing) return;
-    longPressEditStartedAt.current = Date.now();
-    setEditing(true);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined);
+  const orderedTrackers = useMemo(() => trackers, [trackers]);
+
+  const openTracker = (tracker: Tracker) => {
+    tapHaptic();
+    router.navigate({
+      pathname: '/tracker-detail',
+      params: { trackerId: tracker.id },
+    });
   };
 
-  const confirmDelete = (tracker: Tracker) => {
-    const count = events.filter((event) => event.trackerId === tracker.id).length;
-    Alert.alert(
-      `Delete ${tracker.name}?`,
-      count
-        ? `This also deletes ${count} ${count === 1 ? 'entry' : 'entries'}.`
-        : 'This tracker has no entries.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => deleteTracker(tracker.id),
-        },
-      ],
-    );
-  };
-
-  const moveTrackers = (sourceIndices: number[], destination: number) => {
-    const source = sourceIndices[0];
-    if (source === undefined) return;
-
-    const ordered = [...trackers];
-    const [moved] = ordered.splice(source, 1);
-    if (!moved) return;
-
-    const adjustedDestination = source < destination ? destination - 1 : destination;
-    ordered.splice(
-      Math.max(0, Math.min(adjustedDestination, ordered.length)),
-      0,
-      moved,
-    );
-    reorderTrackers(ordered.map((tracker) => tracker.id));
-    Haptics.selectionAsync().catch(() => undefined);
-  };
-
-  const deleteTrackers = (indices: number[]) => {
-    const tracker = trackers[indices[0]];
-    if (tracker) confirmDelete(tracker);
+  const toggleCompletion = (tracker: Tracker) => {
+    const result = toggleTrackerCheckIn(tracker.id);
+    if (result === 'completed') successHaptic();
+    else if (result === 'uncompleted') tapHaptic();
   };
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
       <Stack.Screen
         options={{
-          headerRight: () => (
-            <Pressable
-              accessibilityLabel={editing ? 'Done editing trackers' : 'Edit trackers'}
-              accessibilityRole="button"
-              onPress={() => {
-                longPressEditStartedAt.current = 0;
-                setEditing((value) => !value);
-              }}
-              style={styles.headerButton}
-            >
-              <Text style={[styles.headerButtonText, { color: theme.colors.accent }]}>
-                {editing ? 'Done' : 'Edit'}
-              </Text>
-            </Pressable>
-          ),
-          title: 'Track',
+          headerShown: false,
         }}
       />
-      <Host style={styles.listHost}>
-        <List
-          modifiers={[
-            listStyle('plain'),
-            scrollContentBackground('hidden'),
-            background(theme.colors.background),
-            environment({
-              key: 'editMode',
-              value: editing ? 'active' : 'inactive',
-            }),
-          ]}
+
+      <View
+        style={[
+          styles.header,
+          {
+            height: insets.top + 64,
+            paddingTop: insets.top,
+          },
+        ]}
+      >
+        <Text
+          accessibilityRole="header"
+          style={[styles.headerTitle, { color: theme.colors.text }]}
         >
-          {trackers.length ? null : (
-            <NativeText
-              modifiers={[
-                foregroundStyle(theme.colors.textSecondary),
-                padding({ all: spacing.lg }),
-                listRowBackground(theme.colors.background),
-                listRowSeparator('hidden'),
+          Tracky
+        </Text>
+        <GlassButton
+          accessibilityLabel="Create a new tracker"
+          compact
+          icon={Add01Icon}
+          onPress={() => {
+            tapHaptic();
+            setEditorOpen(true);
+          }}
+          prominent
+        />
+      </View>
+
+      <ScrollView
+        contentInsetAdjustmentBehavior="never"
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: Math.max(insets.bottom, spacing.md) + 80 },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        {orderedTrackers.length ? (
+          <View
+            style={[
+              styles.group,
+              {
+                backgroundColor: theme.colors.surface,
+                borderColor: theme.colors.border,
+              },
+            ]}
+          >
+            {orderedTrackers.map((tracker, index) => {
+              const status = trackerStatus(tracker, events, new Date());
+              return (
+                <TrackerRow
+                  isLast={index === orderedTrackers.length - 1}
+                  key={tracker.id}
+                  onOpen={() => openTracker(tracker)}
+                  onQuickLog={() => toggleCompletion(tracker)}
+                  status={status}
+                  theme={theme}
+                  tracker={tracker}
+                />
+              );
+            })}
+          </View>
+        ) : (
+          <View style={styles.empty}>
+            <View
+              style={[
+                styles.emptyIcon,
+                {
+                  backgroundColor: theme.colors.surface,
+                  borderColor: theme.colors.border,
+                },
               ]}
             >
-              Make a tracker for anything you want to remember.
-            </NativeText>
-          )}
-          <List.ForEach onDelete={deleteTrackers} onMove={moveTrackers}>
-            {trackers.map((tracker) => (
-              <TrackerListItem
-                editing={editing}
-                eventCount={
-                  events.filter((event) => event.trackerId === tracker.id).length
-                }
-                events={events}
-                key={tracker.id}
-                now={summaryNow}
-                onEnterEditing={enterEditing}
-                onOpen={() => {
-                  if (Date.now() - longPressEditStartedAt.current < 1_000) return;
-                  router.push(`/track/${tracker.id}`);
-                }}
-                theme={theme}
-                tracker={tracker}
+              <Icon
+                color={theme.colors.textSecondary}
+                icon={Tick02Icon}
+                size={28}
               />
-            ))}
-          </List.ForEach>
-          <ListItem
-            leading={
-              <View
+            </View>
+            <Text style={[typography.section, { color: theme.colors.text }]}>
+              Nothing to track yet
+            </Text>
+            <Text
+              style={[
+                typography.body,
+                styles.emptyCopy,
+                { color: theme.colors.textSecondary },
+              ]}
+            >
+              Add a tracker for anything you want to remember or do regularly.
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => {
+                tapHaptic();
+                setEditorOpen(true);
+              }}
+              style={[
+                styles.emptyButton,
+                { backgroundColor: theme.colors.accent },
+              ]}
+            >
+              <Text
                 style={[
-                  styles.newIcon,
-                  { backgroundColor: theme.colors.accentSoft },
+                  typography.label,
+                  { color: theme.colors.onAccent },
                 ]}
               >
-                <Icon color={theme.colors.accent} icon={Add01Icon} size={21} />
-              </View>
-            }
-            modifiers={[
-              nativeAccessibilityLabel('Create a new tracker'),
-              listRowInsets({
-                top: spacing.xs,
-                leading: spacing.lg,
-                bottom: spacing.xs,
-                trailing: spacing.lg,
-              }),
-              listRowSeparator('hidden'),
-              listRowBackground(theme.colors.background),
-              padding({ horizontal: spacing.md, vertical: spacing.md }),
-              background(
-                theme.colors.surface,
-                shapes.roundedRectangle({ cornerRadius: radius.lg }),
-              ),
-              strokeBorder({
-                color: theme.colors.border,
-                shape: 'roundedRectangle',
-                cornerRadius: radius.lg,
-                style: { lineWidth: 1, dash: [5, 4] },
-              }),
-            ]}
-            onPress={() => setEditorOpen(true)}
-          >
-            <NativeText
-              modifiers={[
-                font({ textStyle: 'headline', weight: 'semibold' }),
-                foregroundStyle(theme.colors.text),
-              ]}
-            >
-              New
-            </NativeText>
-          </ListItem>
-          <NativeSpacer
-            modifiers={[
-              frame({ height: 112 }),
-              listRowInsets({ top: 0, leading: 0, bottom: 0, trailing: 0 }),
-              listRowBackground(theme.colors.background),
-              listRowSeparator('hidden'),
-            ]}
-          />
-        </List>
-      </Host>
+                New tracker
+              </Text>
+            </Pressable>
+          </View>
+        )}
+
+      </ScrollView>
+
       <TrackerEditorSheet
         onClose={() => setEditorOpen(false)}
         visible={editorOpen}
@@ -234,147 +200,209 @@ export default function TrackScreen() {
   );
 }
 
-function TrackerListItem({
-  editing,
-  eventCount,
-  events,
-  now,
-  onEnterEditing,
+function TrackerRow({
+  isLast,
   onOpen,
+  onQuickLog,
+  status,
   theme,
   tracker,
 }: {
-  editing: boolean;
-  eventCount: number;
-  events: TrackedEvent[];
-  now: Date;
-  onEnterEditing: () => void;
+  isLast: boolean;
   onOpen: () => void;
+  onQuickLog: () => void;
+  status: { complete: boolean; detail: string };
   theme: Theme;
   tracker: Tracker;
 }) {
-  const summary = trackerSummary(tracker, events, now);
-
   return (
-    <Menu
-      label={
-        <HStack spacing={12}>
-          <RNHostView matchContents>
-            <View
-              style={[
-                styles.icon,
-                {
-                  backgroundColor: colorWithAlpha(tracker.color, 0.12),
-                  borderColor: colorWithAlpha(tracker.color, 0.25),
-                },
-              ]}
-            >
-              <TrackerIcon color={tracker.color} name={tracker.icon} size={25} />
-            </View>
-          </RNHostView>
-          <VStack alignment="leading" spacing={2}>
-            <NativeText
-              modifiers={[
-                font({ textStyle: 'headline', weight: 'semibold' }),
-                foregroundStyle(theme.colors.text),
-              ]}
-            >
-              {tracker.name}
-            </NativeText>
-            {editing ? null : (
-              <NativeText
-                modifiers={[
-                  font({ textStyle: 'caption', weight: 'medium' }),
-                  foregroundStyle(theme.colors.textSecondary),
-                ]}
-              >
-                {summary.detail}
-              </NativeText>
-            )}
-          </VStack>
-          <NativeSpacer />
-          {editing ? null : (
-            <HStack spacing={spacing.xs}>
-              <NativeText
-                modifiers={[
-                  font({ textStyle: 'title3', weight: 'bold' }),
-                  foregroundStyle(theme.colors.text),
-                ]}
-              >
-                {summary.value}
-              </NativeText>
-              <NativeImage
-                color={theme.colors.textTertiary}
-                size={14}
-                systemName="chevron.right"
-              />
-            </HStack>
-          )}
-        </HStack>
-      }
-      modifiers={[
-        tag(tracker.id),
-        nativeAccessibilityLabel(
-          `${tracker.name}, ${summary.value}, ${summary.detail}, ${eventCount} ${eventCount === 1 ? 'entry' : 'entries'}`,
-        ),
-        listRowInsets({
-          top: spacing.xs,
-          leading: spacing.lg,
-          bottom: spacing.xs,
-          trailing: spacing.lg,
-        }),
-        listRowSeparator('hidden'),
-        listRowBackground(theme.colors.background),
-        padding({ horizontal: spacing.md, vertical: spacing.md }),
-        background(
-          theme.colors.surface,
-          shapes.roundedRectangle({ cornerRadius: radius.lg }),
-        ),
-        strokeBorder({
-          color: theme.colors.border,
-          shape: 'roundedRectangle',
-          cornerRadius: radius.lg,
-          style: { lineWidth: 1 },
-        }),
-        deleteDisabled(!editing),
-        moveDisabled(!editing),
+    <View
+      style={[
+        styles.row,
+        !isLast && {
+          borderBottomColor: theme.colors.separator,
+          borderBottomWidth: StyleSheet.hairlineWidth,
+        },
       ]}
-      onPrimaryAction={() => {
-        if (!editing) onOpen();
-      }}
     >
-      <NativeButton
-        label="Edit trackers"
-        onPress={onEnterEditing}
-        systemImage="line.3.horizontal"
-      />
-    </Menu>
+      <Pressable
+        accessibilityHint="Opens tracker details"
+        accessibilityLabel={`${tracker.name}, ${status.detail}`}
+        accessibilityRole="button"
+        onPress={onOpen}
+        style={({ pressed }) => [
+          styles.rowMain,
+          pressed && { opacity: 0.62 },
+        ]}
+      >
+        <View
+          style={[
+            styles.trackerIcon,
+            {
+              backgroundColor: theme.colors.backgroundRaised,
+              borderColor: theme.colors.border,
+            },
+          ]}
+        >
+          <TrackerIcon
+            color={theme.colors.text}
+            name={tracker.icon}
+            size={29}
+          />
+        </View>
+        <View style={styles.rowCopy}>
+          <Text
+            numberOfLines={1}
+            style={[
+              typography.cardTitle,
+              styles.trackerName,
+              { color: theme.colors.text },
+            ]}
+          >
+            {tracker.name}
+          </Text>
+          <Text
+            numberOfLines={1}
+            style={[
+              typography.caption,
+              styles.trackerDetail,
+              { color: theme.colors.textSecondary },
+            ]}
+          >
+            {status.detail}
+          </Text>
+        </View>
+        <Icon
+          color={theme.colors.textTertiary}
+          icon={ArrowRight01Icon}
+          size={17}
+        />
+      </Pressable>
+      <Pressable
+        accessibilityLabel={
+          status.complete
+            ? `Mark ${tracker.name} not complete for today`
+            : `Mark ${tracker.name} complete for today`
+        }
+        accessibilityRole="button"
+        accessibilityState={{ selected: status.complete }}
+        hitSlop={8}
+        onPress={onQuickLog}
+        style={({ pressed }) => [
+          styles.quickAction,
+          {
+            backgroundColor: status.complete
+              ? theme.colors.accent
+              : pressed
+                ? theme.colors.surfaceMuted
+                : theme.colors.backgroundRaised,
+            borderColor: status.complete
+              ? theme.colors.accent
+              : theme.colors.border,
+          },
+        ]}
+      >
+        <Icon
+          color={
+            status.complete ? theme.colors.onAccent : theme.colors.text
+          }
+          icon={
+            status.complete ? Tick02Icon : Add01Icon
+          }
+          size={status.complete ? 23 : 21}
+          strokeWidth={2}
+        />
+      </Pressable>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  listHost: { flex: 1 },
-  headerButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 36,
-    paddingHorizontal: spacing.xs,
+  content: {
+    gap: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
   },
-  headerButtonText: { fontSize: 17, fontWeight: '500' },
-  icon: {
+  header: {
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: '600',
+    letterSpacing: -0.4,
+  },
+  group: {
     borderRadius: radius.md,
-    borderWidth: 1,
-    height: 48,
-    justifyContent: 'center',
-    width: 48,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: 'hidden',
   },
-  newIcon: {
+  row: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    minHeight: 92,
+    paddingRight: spacing.md,
+  },
+  rowMain: {
+    alignItems: 'center',
+    flex: 1,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    minHeight: 92,
+    paddingLeft: spacing.md,
+    paddingRight: spacing.sm,
+  },
+  trackerIcon: {
     alignItems: 'center',
     borderRadius: radius.pill,
-    height: 36,
+    borderWidth: StyleSheet.hairlineWidth,
+    height: 56,
     justifyContent: 'center',
-    width: 36,
+    width: 56,
+  },
+  rowCopy: { flex: 1, gap: spacing.xxs },
+  trackerName: {
+    fontSize: 18,
+    lineHeight: 23,
+  },
+  trackerDetail: {
+    fontSize: 14,
+    lineHeight: 19,
+  },
+  quickAction: {
+    alignItems: 'center',
+    borderRadius: radius.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+    height: 44,
+    justifyContent: 'center',
+    width: 44,
+  },
+  empty: {
+    alignItems: 'center',
+    alignSelf: 'center',
+    gap: spacing.sm,
+    maxWidth: 300,
+    paddingTop: 96,
+  },
+  emptyIcon: {
+    alignItems: 'center',
+    borderRadius: radius.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+    height: 56,
+    justifyContent: 'center',
+    marginBottom: spacing.xs,
+    width: 56,
+  },
+  emptyCopy: { textAlign: 'center' },
+  emptyButton: {
+    alignItems: 'center',
+    borderRadius: radius.pill,
+    justifyContent: 'center',
+    marginTop: spacing.sm,
+    minHeight: 48,
+    paddingHorizontal: spacing.xl,
   },
 });

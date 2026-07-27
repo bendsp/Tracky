@@ -36,6 +36,7 @@ import {
   trackyHydrationErrorMessage,
 } from '../storage/trackyData';
 import { TrackyPersistenceQueue } from '../storage/TrackyPersistenceQueue';
+import { localDateKey } from '../domain/tracking';
 
 type TrackyContextValue = PersistedTrackyState & {
   hydrated: boolean;
@@ -56,6 +57,10 @@ type TrackyContextValue = PersistedTrackyState & {
   deleteTracker: (id: string) => void;
   reorderTrackers: (orderedIds: string[]) => void;
   addTrackerChoice: (trackerId: string, fieldId: string, choice: string) => void;
+  toggleTrackerCheckIn: (
+    trackerId: string,
+    at?: Date,
+  ) => 'completed' | 'uncompleted' | null;
   logEvent: (trackerId: string, draft: TrackerEntryDraft) => string;
   updateEvent: (eventId: string, draft: TrackerEntryDraft) => void;
   deleteEvent: (eventId: string) => void;
@@ -400,6 +405,49 @@ export function TrackyProvider({ children }: PropsWithChildren) {
     [state.trackers],
   );
 
+  const toggleTrackerCheckIn = useCallback(
+    (trackerId: string, at = new Date()) => {
+      if (!Number.isFinite(at.getTime())) return null;
+      const dayKey = localDateKey(at);
+      const snapshot = stateRef.current;
+      if (!snapshot.trackers.some((tracker) => tracker.id === trackerId)) {
+        return null;
+      }
+
+      const isTodayEvent = (event: PersistedTrackyState['events'][number]) =>
+        event.trackerId === trackerId &&
+        localDateKey(new Date(event.occurredAt)) === dayKey;
+      const completed = snapshot.events.some(isTodayEvent);
+      const timestamp = new Date().toISOString();
+
+      const nextState: PersistedTrackyState = completed
+        ? {
+            ...snapshot,
+            events: snapshot.events.filter((event) => !isTodayEvent(event)),
+          }
+        : {
+            ...snapshot,
+            events: [
+              ...snapshot.events,
+              {
+                id: id('event'),
+                trackerId,
+                occurredAt: at.toISOString(),
+                values: {},
+                note: null,
+                createdAt: timestamp,
+                updatedAt: timestamp,
+              },
+            ],
+          };
+
+      stateRef.current = nextState;
+      setState(nextState);
+      return completed ? 'uncompleted' : 'completed';
+    },
+    [],
+  );
+
   const updateEvent = useCallback((eventId: string, draft: TrackerEntryDraft) => {
     if (!Number.isFinite(new Date(draft.occurredAt).getTime())) return;
     const timestamp = new Date().toISOString();
@@ -498,6 +546,7 @@ export function TrackyProvider({ children }: PropsWithChildren) {
       deleteTracker,
       reorderTrackers,
       addTrackerChoice,
+      toggleTrackerCheckIn,
       logEvent,
       updateEvent,
       deleteEvent,
@@ -524,6 +573,7 @@ export function TrackyProvider({ children }: PropsWithChildren) {
       deleteTracker,
       reorderTrackers,
       addTrackerChoice,
+      toggleTrackerCheckIn,
       logEvent,
       updateEvent,
       deleteEvent,

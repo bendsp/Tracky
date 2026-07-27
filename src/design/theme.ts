@@ -3,9 +3,9 @@ import type { ColorSchemeName } from 'react-native';
 export type AppearanceMode = 'system' | 'light' | 'dark';
 
 export const accent = {
-  primary: '#3578F6',
-  softLight: '#EAF1FF',
-  softDark: '#152342',
+  primary: '#292929',
+  softLight: '#F5F5F5',
+  softDark: '#262626',
 } as const;
 
 export const activityAccents = [
@@ -41,21 +41,31 @@ export const spacing = {
 } as const;
 
 export const radius = {
-  sm: 10,
+  sm: 8,
   md: 16,
-  lg: 22,
-  xl: 28,
+  lg: 16,
+  xl: 16,
   pill: 999,
 } as const;
 
 export const type = {
-  eyebrow: { fontSize: 11, fontWeight: '700' as const, letterSpacing: 1.2 },
-  title: { fontSize: 32, fontWeight: '700' as const, letterSpacing: -0.9 },
-  section: { fontSize: 20, fontWeight: '700' as const, letterSpacing: -0.35 },
-  cardTitle: { fontSize: 16, fontWeight: '700' as const, letterSpacing: -0.15 },
-  body: { fontSize: 15, fontWeight: '400' as const, lineHeight: 21 },
-  label: { fontSize: 13, fontWeight: '600' as const },
-  caption: { fontSize: 12, fontWeight: '500' as const, lineHeight: 17 },
+  eyebrow: { fontSize: 12, fontWeight: '500' as const, letterSpacing: -0.15 },
+  title: { fontSize: 24, fontWeight: '500' as const, letterSpacing: -0.15 },
+  section: { fontSize: 24, fontWeight: '500' as const, letterSpacing: -0.15 },
+  cardTitle: { fontSize: 14, fontWeight: '500' as const, letterSpacing: -0.15 },
+  body: {
+    fontSize: 14,
+    fontWeight: '400' as const,
+    letterSpacing: -0.15,
+    lineHeight: 20,
+  },
+  label: { fontSize: 13, fontWeight: '500' as const, letterSpacing: -0.15 },
+  caption: {
+    fontSize: 12,
+    fontWeight: '400' as const,
+    letterSpacing: -0.15,
+    lineHeight: 17,
+  },
 } as const;
 
 export type Theme = ReturnType<typeof makeTheme>;
@@ -75,23 +85,23 @@ export function makeTheme(scheme: 'light' | 'dark') {
     dark,
     scheme,
     colors: {
-      background: dark ? '#09090B' : '#F6F6F3',
-      backgroundRaised: dark ? '#101012' : '#FBFBF9',
-      surface: dark ? '#19191C' : '#FFFFFF',
-      surfaceMuted: dark ? '#222226' : '#ECECE8',
-      text: dark ? '#F5F5F3' : '#171716',
-      textSecondary: dark ? '#A2A2A8' : '#71716D',
-      textTertiary: dark ? '#74747B' : '#9A9A94',
-      border: dark ? '#2C2C31' : '#E1E1DB',
-      separator: dark ? '#252529' : '#E9E9E4',
-      accent: accent.primary,
-      onAccent: '#FFFFFF',
+      background: dark ? '#0A0A0A' : '#FFFFFF',
+      backgroundRaised: dark ? '#0A0A0A' : '#FAFAFA',
+      surface: dark ? '#171717' : '#FAFAFA',
+      surfaceMuted: dark ? '#262626' : '#F5F5F5',
+      text: dark ? '#FAFAFA' : '#292929',
+      textSecondary: dark ? '#A3A3A3' : '#5D5D5D',
+      textTertiary: dark ? '#737373' : '#9E9E9E',
+      border: dark ? '#262626' : '#E5E5E5',
+      separator: dark ? '#262626' : '#E5E5E5',
+      accent: dark ? '#FAFAFA' : '#292929',
+      onAccent: dark ? '#0A0A0A' : '#FFFFFF',
       accentSoft: dark ? accent.softDark : accent.softLight,
       danger: dark ? '#FF6961' : '#D92D20',
       dangerSoft: dark ? '#351A1B' : '#FCECEB',
-      glassFallback: dark ? 'rgba(27,27,31,0.96)' : 'rgba(246,246,243,0.96)',
+      glassFallback: dark ? 'rgba(23,23,23,0.96)' : 'rgba(250,250,250,0.96)',
       glassHighlight: dark ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.72)',
-      glassIcon: dark ? '#A8A8AF' : '#67676D',
+      glassIcon: dark ? '#A3A3A3' : '#5D5D5D',
       scrim: dark ? 'rgba(0,0,0,0.58)' : 'rgba(0,0,0,0.24)',
     },
   } as const;

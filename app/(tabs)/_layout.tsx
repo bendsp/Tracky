@@ -1,25 +1,8 @@
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
-import {
-  CalendarSelectionProvider,
-  useCalendarSelection,
-} from '../../src/components/calendar/CalendarSelectionProvider';
 import { useTracky } from '../../src/store/TrackyProvider';
 
 export default function TabsLayout() {
-  return (
-    <CalendarSelectionProvider>
-      <TabsContent />
-    </CalendarSelectionProvider>
-  );
-}
-
-function TabsContent() {
   const { theme } = useTracky();
-  const { selectedDate } = useCalendarSelection();
-  const calendarLabel = new Intl.DateTimeFormat(undefined, {
-    day: 'numeric',
-    month: 'long',
-  }).format(selectedDate);
 
   return (
     <NativeTabs
@@ -37,18 +20,17 @@ function TabsContent() {
         default: { color: theme.colors.glassIcon },
         selected: { color: theme.colors.accent },
       }}
-      shadowColor={theme.colors.separator}
+      shadowColor="transparent"
       tintColor={theme.colors.accent}
     >
       <NativeTabs.Trigger name="track">
         <NativeTabs.Trigger.Icon
-          sf={{ default: 'chart.bar', selected: 'chart.bar.fill' }}
+          sf={{
+            default: 'checkmark.circle',
+            selected: 'checkmark.circle.fill',
+          }}
         />
         <NativeTabs.Trigger.Label>Track</NativeTabs.Trigger.Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="calendar">
-        <NativeTabs.Trigger.Icon sf="calendar" />
-        <NativeTabs.Trigger.Label>{calendarLabel}</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="settings">
         <NativeTabs.Trigger.Icon

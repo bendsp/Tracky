@@ -34,6 +34,7 @@ import { StyleSheet } from 'react-native';
 
 import { radius, spacing } from '../design/theme';
 import { useTracky } from '../store/TrackyProvider';
+import { selectionHaptic, tapHaptic } from '../utils/haptics';
 
 type FieldProps = {
   accessibilityLabel?: string;
@@ -170,7 +171,10 @@ export function PrimaryButton({
     >
       <Button
         label={label}
-        onPress={onPress}
+        onPress={() => {
+          tapHaptic();
+          onPress();
+        }}
         modifiers={[
           accessibilityLabel(label),
           buttonStyle('borderedProminent'),
@@ -203,7 +207,10 @@ export function ChoiceChip({
     >
       <Button
         label={label}
-        onPress={onPress}
+        onPress={() => {
+          selectionHaptic();
+          onPress();
+        }}
         modifiers={[
           accessibilityLabel(label),
           buttonStyle(selected ? 'borderedProminent' : 'bordered'),

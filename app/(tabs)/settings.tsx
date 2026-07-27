@@ -1,8 +1,11 @@
 import {
+  CrownIcon,
   DatabaseExportIcon,
   FileImportIcon,
   Delete02Icon,
+  RefreshIcon,
   ShieldUserIcon,
+  WalletDone01Icon,
 } from '@hugeicons/core-free-icons';
 import Constants from 'expo-constants';
 import * as DocumentPicker from 'expo-document-picker';
@@ -37,6 +40,11 @@ import {
   TrackyRollbackError,
 } from '../../src/storage/trackyData';
 import { useTracky } from '../../src/store/TrackyProvider';
+import { useRevenueCat } from '../../src/subscriptions/RevenueCatProvider';
+import {
+  getPurchaseErrorMessage,
+  hasTrackyPlus,
+} from '../../src/subscriptions/subscriptionState';
 
 const APPEARANCE: {
   value: AppearanceMode;
@@ -74,6 +82,15 @@ function prepareTrackyCache() {
 export default function SettingsScreen() {
   const router = useRouter();
   const {
+    configurationError,
+    isConfigured: purchasesConfigured,
+    isLoading: purchasesLoading,
+    isPlus,
+    presentCustomerCenter,
+    presentPaywall,
+    restorePurchases,
+  } = useRevenueCat();
+  const {
     appearance,
     deleteAll,
     exportSnapshot,
@@ -89,6 +106,53 @@ export default function SettingsScreen() {
       // iOS will eventually purge cache files if an item is temporarily busy.
     }
   }, []);
+
+  const showPlans = async () => {
+    try {
+      await presentPaywall();
+    } catch (error) {
+      Alert.alert(
+        'Cannot show plans',
+        getPurchaseErrorMessage(
+          error,
+          configurationError ?? 'Tracky Plus plans are unavailable right now.',
+        ),
+      );
+    }
+  };
+
+  const manageSubscription = async () => {
+    try {
+      await presentCustomerCenter();
+    } catch (error) {
+      Alert.alert(
+        'Cannot open subscription management',
+        getPurchaseErrorMessage(error),
+      );
+    }
+  };
+
+  const restoreTrackyPlus = async () => {
+    try {
+      const restoredCustomerInfo = await restorePurchases();
+      Alert.alert(
+        hasTrackyPlus(restoredCustomerInfo)
+          ? 'Tracky Plus restored'
+          : 'No purchase found',
+        hasTrackyPlus(restoredCustomerInfo)
+          ? 'Tracky Plus is active on this device.'
+          : 'No Tracky Plus purchase was found for this Apple account.',
+      );
+    } catch (error) {
+      Alert.alert(
+        'Restore failed',
+        getPurchaseErrorMessage(
+          error,
+          configurationError ?? 'Tracky could not restore purchases.',
+        ),
+      );
+    }
+  };
 
   const exportData = async () => {
     try {
@@ -226,6 +290,56 @@ export default function SettingsScreen() {
             selection={appearance}
           />
 
+          <SectionTitle>Tracky Plus</SectionTitle>
+          <View
+            style={[
+              styles.group,
+              { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+            ]}
+          >
+            <SettingsRow
+              icon={CrownIcon}
+              label="Tracky Plus"
+              onPress={isPlus ? manageSubscription : showPlans}
+              value={
+                purchasesLoading
+                  ? 'Checking…'
+                  : isPlus
+                    ? 'Active'
+                    : purchasesConfigured
+                      ? 'Free'
+                      : 'Unavailable'
+              }
+            />
+            <View
+              style={[styles.separator, { backgroundColor: theme.colors.separator }]}
+            />
+            <SettingsRow
+              icon={WalletDone01Icon}
+              label={isPlus ? 'Manage subscription' : 'View plans'}
+              onPress={isPlus ? manageSubscription : showPlans}
+            />
+            <View
+              style={[styles.separator, { backgroundColor: theme.colors.separator }]}
+            />
+            <SettingsRow
+              icon={RefreshIcon}
+              label="Restore purchases"
+              onPress={restoreTrackyPlus}
+            />
+          </View>
+          {configurationError ? (
+            <Text
+              style={[
+                typography.caption,
+                styles.sectionNote,
+                { color: theme.colors.textSecondary },
+              ]}
+            >
+              {configurationError}
+            </Text>
+          ) : null}
+
           <SectionTitle>Data</SectionTitle>
           <View
             style={[
@@ -340,11 +454,13 @@ function SettingsRow({
   icon,
   label,
   onPress,
+  value,
 }: {
   danger?: boolean;
   icon: typeof Delete02Icon;
   label: string;
   onPress: () => void;
+  value?: string;
 }) {
   const { theme } = useTracky();
   const tint = danger ? theme.colors.danger : theme.colors.accent;
@@ -374,6 +490,11 @@ function SettingsRow({
       >
         {label}
       </Text>
+      {value ? (
+        <Text style={[typography.body, { color: theme.colors.textSecondary }]}>
+          {value}
+        </Text>
+      ) : null}
     </Pressable>
   );
 }
@@ -399,6 +520,10 @@ const styles = StyleSheet.create({
   },
   rowLabel: { flex: 1 },
   separator: { height: StyleSheet.hairlineWidth, marginLeft: 58 },
+  sectionNote: {
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.xs,
+  },
   creatorLink: {
     alignItems: 'center',
     paddingHorizontal: spacing.md,

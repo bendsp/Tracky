@@ -64,7 +64,7 @@ export function TrackerTemplateGateway({
                 accessibilityHint={`Opens an editable ${template.name} tracker`}
                 icon={
                   <TrackerIcon
-                    color={template.color}
+                    color={theme.colors.text}
                     name={template.icon}
                     size={27}
                   />
@@ -79,7 +79,7 @@ export function TrackerTemplateGateway({
             <TemplateRow
               icon={
                 <Icon
-                  color={theme.colors.accent}
+                  color={theme.colors.text}
                   icon={Add01Icon}
                   size={27}
                   strokeWidth={1.9}

@@ -23,11 +23,6 @@ export default function TrackLayout() {
             : { backgroundColor: theme.colors.background },
         headerTintColor: theme.colors.accent,
         headerTitleAlign: 'left',
-        headerTitleStyle: {
-          color: theme.colors.text,
-          fontSize: 20,
-          fontWeight: '700',
-        },
         headerTransparent: Platform.OS === 'ios',
       }}
     />

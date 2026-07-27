@@ -1,14 +1,13 @@
-import { Stack, usePathname } from 'expo-router';
+import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-import { UniversalAdd } from '../src/components/UniversalAdd';
 import { spacing, type as typography } from '../src/design/theme';
 import { useTracky, TrackyProvider } from '../src/store/TrackyProvider';
+import { RevenueCatProvider } from '../src/subscriptions/RevenueCatProvider';
 
 function RootNavigator() {
-  const pathname = usePathname();
   const {
     hydrated,
     loadError,
@@ -66,8 +65,41 @@ function RootNavigator() {
           contentStyle: { backgroundColor: theme.colors.background },
           headerShown: false,
         }}
-      />
-      {pathname === '/privacy' ? null : <UniversalAdd />}
+      >
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen
+          name="tracker-detail"
+          options={{
+            contentStyle: { backgroundColor: theme.colors.background },
+            headerBackVisible: false,
+            headerShadowVisible: false,
+            headerShown: true,
+            headerStyle: { backgroundColor: theme.colors.background },
+            headerTintColor: theme.colors.text,
+            presentation: 'formSheet',
+            sheetAllowedDetents: [1],
+            sheetCornerRadius: 40,
+            sheetGrabberVisible: false,
+            sheetInitialDetentIndex: 0,
+          }}
+        />
+        <Stack.Screen
+          name="log-tracker"
+          options={{
+            contentStyle: { backgroundColor: theme.colors.background },
+            headerBackVisible: false,
+            headerShadowVisible: false,
+            headerShown: true,
+            headerStyle: { backgroundColor: theme.colors.background },
+            headerTintColor: theme.colors.text,
+            presentation: 'formSheet',
+            sheetAllowedDetents: [1],
+            sheetCornerRadius: 40,
+            sheetGrabberVisible: false,
+            sheetInitialDetentIndex: 0,
+          }}
+        />
+      </Stack>
       {saveError ? (
         <Pressable
           accessibilityLabel="Local save failed. Tap to retry."
@@ -94,7 +126,9 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <TrackyProvider>
-        <RootNavigator />
+        <RevenueCatProvider>
+          <RootNavigator />
+        </RevenueCatProvider>
       </TrackyProvider>
     </GestureHandlerRootView>
   );
