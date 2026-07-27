@@ -114,20 +114,11 @@ export default function TodayScreen() {
         showsVerticalScrollIndicator={false}
       >
         {orderedTrackers.length ? (
-          <View
-            style={[
-              styles.group,
-              {
-                backgroundColor: theme.colors.surface,
-                borderColor: theme.colors.border,
-              },
-            ]}
-          >
-            {orderedTrackers.map((tracker, index) => {
+          <View style={styles.trackerList}>
+            {orderedTrackers.map((tracker) => {
               const status = trackerStatus(tracker, events, new Date());
               return (
                 <TrackerRow
-                  isLast={index === orderedTrackers.length - 1}
                   key={tracker.id}
                   onOpen={() => openTracker(tracker)}
                   onQuickLog={() => toggleCompletion(tracker)}
@@ -201,14 +192,12 @@ export default function TodayScreen() {
 }
 
 function TrackerRow({
-  isLast,
   onOpen,
   onQuickLog,
   status,
   theme,
   tracker,
 }: {
-  isLast: boolean;
   onOpen: () => void;
   onQuickLog: () => void;
   status: { complete: boolean; detail: string };
@@ -219,9 +208,9 @@ function TrackerRow({
     <View
       style={[
         styles.row,
-        !isLast && {
-          borderBottomColor: theme.colors.separator,
-          borderBottomWidth: StyleSheet.hairlineWidth,
+        {
+          backgroundColor: theme.colors.surface,
+          borderColor: theme.colors.border,
         },
       ]}
     >
@@ -335,15 +324,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: -0.4,
   },
-  group: {
-    borderRadius: radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    overflow: 'hidden',
-  },
+  trackerList: { gap: spacing.sm },
   row: {
     alignItems: 'center',
+    borderRadius: radius.md,
+    borderWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
     minHeight: 92,
+    overflow: 'hidden',
     paddingRight: spacing.md,
   },
   rowMain: {
