@@ -56,4 +56,20 @@ The grouped tracker rows, completion controls, sheet header, consistency card, m
 - P3: Revisit whether a streak label adds enough value once several days of real check-ins exist.
 - P3: Consider introducing one restrained semantic accent only after the monochrome interaction model is validated.
 
+**New Tracker Sheet Refinement**
+
+- Source visual truth: `/var/folders/_b/g355wxdn0xqc1f5cr2b49p8c0000gn/T/codex-clipboard-cbc84ee1-d180-4d7b-9e7a-ad646ab60584.png`
+- Implementation screenshot: `/var/folders/_b/g355wxdn0xqc1f5cr2b49p8c0000gn/T/screenshot_optimized_742d8f9c-a14b-42ee-a5df-035f81e4d300.jpg`
+- Combined comparison: `/Users/ben/Code/Tracky/design-qa-new-tracker.jpg`
+- Viewport: existing Codex iPhone 17 Simulator at 368 × 800 px. The 1206 × 2622 source was normalized to 368 × 800; the implementation capture was already 368 × 800.
+- State: dark appearance, blank New Tracker editor, Add disabled.
+- Fonts and typography: the centered 17 pt semibold sheet title and compact action labels preserve the source hierarchy with native SF typography.
+- Spacing and layout rhythm: Cancel and Add occupy opposite sides of the same 44 pt header row while the title remains geometrically centered. The direct V2 editor intentionally contains fewer fields than the experiment reference.
+- Colors and visual tokens: the sheet uses a dedicated raised dark surface, visibly separating its rounded top boundary from the black Track screen. Inputs and icon choices retain stronger grouped-control surfaces.
+- Image and icon fidelity: the reference's experiment flask is product-specific and intentionally not copied. Tracky uses its existing Hugeicons tracker icon set; no placeholder or handcrafted asset was introduced.
+- Copy and content: `New Tracker`, `Cancel`, and `Add` match the requested interaction. Examples and the `< Examples` navigation item are removed.
+- Primary interactions tested: opening from the white interactive-glass `+`, blank disabled Add, entering a name enables Add, and Cancel dismisses without creating a tracker.
+- Full-view comparison: no actionable P0, P1, or P2 mismatch remains for the requested header and sheet-surface treatment.
+- Focused region comparison: the full-height normalized comparison keeps the header and first form controls readable, so a separate crop was unnecessary.
+
 final result: passed

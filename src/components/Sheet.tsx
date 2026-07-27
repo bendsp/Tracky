@@ -24,19 +24,28 @@ import { useTracky } from '../store/TrackyProvider';
 import { GlassButton } from './GlassButton';
 
 export function Sheet({
+  cancelLabel = 'Cancel',
   children,
+  confirmDisabled = false,
+  confirmLabel,
   onClose,
+  onConfirm,
   size = 'content',
   title,
   visible,
 }: PropsWithChildren<{
+  cancelLabel?: string;
+  confirmDisabled?: boolean;
+  confirmLabel?: string;
   onClose: () => void;
+  onConfirm?: () => void;
   size?: 'content' | 'large';
   title: string;
   visible: boolean;
 }>) {
   const { theme } = useTracky();
   const { width } = useWindowDimensions();
+  const hasActions = Boolean(confirmLabel && onConfirm);
 
   return (
     <Host
@@ -55,7 +64,7 @@ export function Sheet({
       >
         <Group
           modifiers={[
-            presentationBackground(theme.colors.backgroundRaised),
+            presentationBackground(theme.colors.sheetBackground),
             presentationDragIndicator('hidden'),
             ...(size === 'large'
               ? [
@@ -71,28 +80,55 @@ export function Sheet({
                 styles.sheet,
                 size === 'large' && styles.largeSheet,
                 {
-                  backgroundColor: theme.colors.backgroundRaised,
+                  backgroundColor: theme.colors.sheetBackground,
                   width,
                 },
               ]}
             >
-              <View style={styles.heading}>
-                <Text
-                  style={[
-                    typography.section,
-                    styles.headingCopy,
-                    { color: theme.colors.text },
-                  ]}
-                >
-                  {title}
-                </Text>
-                <GlassButton
-                  accessibilityLabel="Close"
-                  compact
-                  icon={Cancel01Icon}
-                  onPress={onClose}
-                />
-              </View>
+              {hasActions ? (
+                <View style={styles.actionHeading}>
+                  <GlassButton
+                    accessibilityLabel={cancelLabel}
+                    compact
+                    label={cancelLabel}
+                    onPress={onClose}
+                  />
+                  <Text
+                    pointerEvents="none"
+                    style={[
+                      styles.centeredTitle,
+                      { color: theme.colors.text },
+                    ]}
+                  >
+                    {title}
+                  </Text>
+                  <GlassButton
+                    accessibilityLabel={confirmLabel!}
+                    compact
+                    disabled={confirmDisabled}
+                    label={confirmLabel}
+                    onPress={onConfirm!}
+                  />
+                </View>
+              ) : (
+                <View style={styles.heading}>
+                  <Text
+                    style={[
+                      typography.section,
+                      styles.headingCopy,
+                      { color: theme.colors.text },
+                    ]}
+                  >
+                    {title}
+                  </Text>
+                  <GlassButton
+                    accessibilityLabel="Close"
+                    compact
+                    icon={Cancel01Icon}
+                    onPress={onClose}
+                  />
+                </View>
+              )}
               {children}
             </View>
           </RNHostView>
@@ -115,6 +151,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
+  },
+  actionHeading: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    minHeight: 44,
+  },
+  centeredTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    left: 0,
+    letterSpacing: -0.15,
+    position: 'absolute',
+    right: 0,
+    textAlign: 'center',
   },
   headingCopy: { flex: 1, paddingRight: spacing.md },
 });

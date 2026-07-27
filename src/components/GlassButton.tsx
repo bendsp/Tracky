@@ -13,6 +13,7 @@ const glassAvailable = isGlassEffectAPIAvailable();
 
 export function GlassButton({
   accessibilityLabel,
+  disabled = false,
   icon,
   label,
   onPress,
@@ -20,7 +21,8 @@ export function GlassButton({
   compact = false,
 }: {
   accessibilityLabel: string;
-  icon: IconSvgElement;
+  disabled?: boolean;
+  icon?: IconSvgElement;
   label?: string;
   onPress: () => void;
   prominent?: boolean;
@@ -35,16 +37,30 @@ export function GlassButton({
         label ? styles.withLabel : null,
       ]}
     >
-      <Icon
-        color={prominent ? theme.colors.onAccent : theme.colors.text}
-        icon={icon}
-        size={compact ? 19 : 22}
-      />
+      {icon ? (
+        <Icon
+          color={
+            disabled
+              ? theme.colors.textTertiary
+              : prominent
+                ? theme.colors.onAccent
+                : theme.colors.text
+          }
+          icon={icon}
+          size={compact ? 19 : 22}
+        />
+      ) : null}
       {label ? (
         <Text
           style={[
             typography.label,
-            { color: prominent ? theme.colors.onAccent : theme.colors.text },
+            {
+              color: disabled
+                ? theme.colors.textTertiary
+                : prominent
+                  ? theme.colors.onAccent
+                  : theme.colors.text,
+            },
           ]}
         >
           {label}
@@ -57,6 +73,8 @@ export function GlassButton({
     <Pressable
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
         styles.pressable,
@@ -66,9 +84,9 @@ export function GlassButton({
       {glassAvailable ? (
         <GlassView
           glassEffectStyle="regular"
-          isInteractive
+          isInteractive={!disabled}
           style={styles.glass}
-          tintColor={prominent ? theme.colors.accent : undefined}
+          tintColor={prominent && !disabled ? theme.colors.accent : undefined}
         >
           {content}
         </GlassView>

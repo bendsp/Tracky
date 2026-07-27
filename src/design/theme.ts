@@ -87,6 +87,7 @@ export function makeTheme(scheme: 'light' | 'dark') {
     colors: {
       background: dark ? '#0A0A0A' : '#FFFFFF',
       backgroundRaised: dark ? '#0A0A0A' : '#FAFAFA',
+      sheetBackground: dark ? '#121212' : '#F2F2F7',
       surface: dark ? '#171717' : '#FAFAFA',
       surfaceMuted: dark ? '#262626' : '#F5F5F5',
       text: dark ? '#FAFAFA' : '#292929',
