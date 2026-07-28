@@ -69,6 +69,17 @@ No actionable P0, P1, or P2 mismatch remains for the selected direction.
 - P3: the implementation uses the platform-native menu indicator instead of the
   reference's heavier custom dropdown pill.
 
+## Sheet header follow-up
+
+- Source: browser annotation on the Edit Tracker sheet header.
+- Implementation:
+  `/var/folders/_b/g355wxdn0xqc1f5cr2b49p8c0000gn/T/screenshot_optimized_37621158-649b-4e54-8212-0862746f4ce6.jpg`
+- Runtime: existing `Codex iPhone 17` simulator, iOS 26.2, dark appearance.
+- The flat header cutoff is replaced by a 36-point progressive native-material
+  transition shared by sheets rendered through `Sheet`.
+- The compact centered title, glass actions, touch targets, and stacking
+  behavior remain unchanged.
+
 ## Final result
 
 final result: passed
