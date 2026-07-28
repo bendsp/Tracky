@@ -1,94 +1,65 @@
-**Comparison Target**
+# Tracker detail design QA
 
-- Source visual truth: `/Users/ben/.codex/generated_images/019f8f36-2d3c-7a12-a41a-9c3b383b0ade/call_e2jQJig9USjmUQPmpeXd40LJ.png`
-- Today implementation: `/var/folders/_b/g355wxdn0xqc1f5cr2b49p8c0000gn/T/screenshot_optimized_242a360f-38ec-4a41-afea-a48f6da7157d.jpg`
-- Detail implementation: `/var/folders/_b/g355wxdn0xqc1f5cr2b49p8c0000gn/T/screenshot_optimized_e563a16f-9d1e-45ff-b1ba-d9225d02e458.jpg`
-- Light Today implementation: `/var/folders/_b/g355wxdn0xqc1f5cr2b49p8c0000gn/T/screenshot_optimized_d8fc19a0-f6d5-42e0-9fa2-b758423c9dcf.jpg`
-- Combined comparison: `/Users/ben/Code/Tracky/design-qa-comparison.jpg`
-- Runtime viewport: 368 × 800 px on the existing Codex iPhone 17 Simulator, iOS 26.2.
-- Source pixels: 1597 × 985. The complete source reference is aspect-fit into a 368 × 800 comparison cell beside two native 368 × 800 implementation captures.
-- State: dark appearance; Today list with one completed tracker; completed tracker detail with consistency, month history, entries, and persistent completion action.
+- Source visual truth:
+  `/var/folders/_b/g355wxdn0xqc1f5cr2b49p8c0000gn/T/codex-clipboard-2c1e42c7-1729-47c5-abff-163003895118.png`
+- Implementation:
+  `design-qa-assets/tracker-detail-2026-07-28.jpg`
+- Source pixels: 1206 × 2622
+- Implementation pixels: 368 × 800
+- Viewport: existing Codex iPhone 17, iOS 26.2
+- State: dark appearance, Water checked in today, one total check-in
+- Density normalization: both captures share the same 0.46 mobile aspect ratio;
+  comparison focused on proportional layout because the source is a higher
+  density capture.
 
-**Findings**
+## Full-view comparison
 
-- No actionable P0, P1, or P2 differences remain.
-- Typography uses the native iOS system face with a restrained 12/13/14/24 scale and regular/medium weights. Hierarchy, wrapping, and contrast remain legible in the focused Today and detail captures.
-- Spacing follows the source’s compact grouped-row rhythm while using the real iOS navigation and tab-safe areas. The detail content scrolls beneath a persistent bottom action with enough content inset to expose the final entry.
-- Colors are deliberately reduced to semantic monochrome tokens. White completion states, near-black canvas, neutral cards, borders, and secondary labels preserve the source hierarchy without legacy tracker colors.
-- Icons use the existing Hugeicons component set. No visible source imagery, logos, or illustrations were replaced with approximate assets.
-- Copy is intentionally simpler than the source: Tracky V2 exposes only binary daily check-ins. Amounts, goals, weekday/date subtitles, and “Anytime” trackers are omitted by product direction rather than lost in implementation.
+The implementation preserves the selected hierarchy from the reference: a
+centered tracker identity and completion circle, a sparse stats surface, a
+calendar surface, and a persistent bottom check-in action. The user explicitly
+excluded the source progress card and score metric, so those omissions are
+intentional rather than fidelity defects.
 
-**Open Questions**
+## Focused comparison
 
-- None blocking. The source uses a fixed-width mock tab bar and back navigation; the implementation intentionally uses Expo Router native tabs and an X for modal dismissal to better match native iOS behavior.
+The completion area, stats card, and bottom action were inspected at full
+resolution. The implementation uses Tracky's existing native sheet header,
+monochrome tokens, Hugeicons tracker icon, 16 pt surface radius, and semantic
+completion-ring color rather than copying the reference's segmented decorative
+ring or unrelated header actions.
 
-**Implementation Checklist**
+## Required fidelity surfaces
 
-- [x] Today opens as the primary native tab.
-- [x] Tracker rows open full-height native form sheets.
-- [x] Separate row-level quick actions create one binary check-in per day.
-- [x] Today keeps one clear creation action in the compact native header.
-- [x] Tracker creation is reduced to name and icon with no automatic keyboard focus.
-- [x] Selection, light-impact, and success haptics are applied to the primary interactions.
-- [x] TypeScript and all 30 automated tests pass.
-- [x] Core interactions were exercised in the actual iOS Simulator.
-- [x] The same Today hierarchy remains legible in explicit light appearance.
+- **Fonts and typography:** system typography, semibold tracker name and stat
+  values, compact secondary labels; hierarchy is clear at the target viewport.
+- **Spacing and layout rhythm:** 16 pt page margin, 24 pt section rhythm, large
+  116 pt completion circle, balanced two-column stats card.
+- **Colors and visual tokens:** app chrome remains monochrome; only the completed
+  tracker ring can use its assigned habit color.
+- **Image and asset fidelity:** no raster imagery is required. Existing
+  Hugeicons assets are used; no handcrafted SVG or placeholder asset was added.
+- **Copy and content:** `Check In`, `Undo Check In`, `Streak`, and `Check Ins`
+  are concise and match the requested model.
 
-**Focused Region Comparison**
+## Comparison history
 
-The grouped tracker rows, completion controls, sheet header, consistency card, month grid, entry row, and bottom completion action are all readable at native capture size in the combined comparison. Separate focused crops were not needed.
+1. Initial implementation still used a small horizontal status card and a
+   sentence-style consistency card.
+2. Replaced them with a centered completion circle and a two-column Streak /
+   Check Ins card; changed the primary action to `+ Check In`.
+3. Simulator verification confirmed immediate updates to completion ring,
+   streak, check-in count, calendar, history, and undo state.
 
-**Comparison History**
+## Findings
 
-- Initial implementation issue: duplicate “New tracker” entry points made the Today screen denser than the source. Fix: retained the native header plus and removed the dashed list row.
-- Initial implementation issue: detail and check-in sheets used a back arrow despite modal presentation. Fix: replaced it with an X and re-captured the actual form sheet.
-- Initial implementation issue: the native form sheet clipped or displaced scroll content at its top and bottom. Fix: provided a stable native root view, automatic content-inset adjustment, and explicit bottom content padding; verified internal scrolling in Simulator.
-- Review issue: binary status could go stale across midnight and rapid taps could create duplicate same-day entries. Fix: restored focus/foreground/day-boundary refresh and added a store-level daily check-in action with a same-day lock.
-- Review issue: legacy rich logging remained reachable through the global action and old detail URL. Fix: removed the global action from the two-tab V2 shell and redirected the legacy detail route into the binary sheet.
-- Review issue: the pressed primary action had insufficient contrast and static entry rows implied navigation. Fix: kept the semantic button fill with pressed opacity and removed the false disclosure arrows.
-- User-feedback issue: a newly created check-in fell just after the screen’s captured `now`, so completion sometimes appeared only after refocusing. Fix: the day-boundary hook now triggers refreshes while every render compares against the actual current instant.
-- User-feedback issue: completion was one-way and the detail hero replaced the tracker identity with status copy. Fix: completion is now a reversible store-level toggle, the tracker name remains the hero, and the persistent bottom action owns the complete/un-complete state.
-- User-feedback issue: Today repeated its title, exposed a redundant global logging action, and added an explicit shadow beneath the native tab material. Fix: retained only the compact native title and header plus, removed the duplicate label and logging button, and made Tracky's configured tab shadow transparent.
-- Post-fix evidence: `/Users/ben/Code/Tracky/design-qa-comparison.jpg`.
+No actionable P0, P1, or P2 mismatch remains for the explicitly selected parts
+of the reference.
 
-**Follow-up Polish**
+## Follow-up polish
 
-- P3: Revisit whether a streak label adds enough value once several days of real check-ins exist.
-- P3: Consider introducing one restrained semantic accent only after the monochrome interaction model is validated.
+- P3: revisit month navigation when scheduling frequency is implemented; the
+  current calendar intentionally remains a read-only history view.
 
-**New Tracker Sheet Refinement**
-
-- Source visual truth: `/var/folders/_b/g355wxdn0xqc1f5cr2b49p8c0000gn/T/codex-clipboard-cbc84ee1-d180-4d7b-9e7a-ad646ab60584.png`
-- Implementation screenshot: `/var/folders/_b/g355wxdn0xqc1f5cr2b49p8c0000gn/T/screenshot_optimized_742d8f9c-a14b-42ee-a5df-035f81e4d300.jpg`
-- Combined comparison: `/Users/ben/Code/Tracky/design-qa-new-tracker.jpg`
-- Viewport: existing Codex iPhone 17 Simulator at 368 × 800 px. The 1206 × 2622 source was normalized to 368 × 800; the implementation capture was already 368 × 800.
-- State: dark appearance, blank New Tracker editor, Add disabled.
-- Fonts and typography: the centered 17 pt semibold sheet title and compact action labels preserve the source hierarchy with native SF typography.
-- Spacing and layout rhythm: Cancel and Add occupy opposite sides of the same 44 pt header row while the title remains geometrically centered. The direct V2 editor intentionally contains fewer fields than the experiment reference.
-- Colors and visual tokens: the sheet uses a dedicated raised dark surface, visibly separating its rounded top boundary from the black Track screen. Inputs and icon choices retain stronger grouped-control surfaces.
-- Image and icon fidelity: the reference's experiment flask is product-specific and intentionally not copied. Tracky uses its existing Hugeicons tracker icon set; no placeholder or handcrafted asset was introduced.
-- Copy and content: `New Tracker`, `Cancel`, and `Add` match the requested interaction. Examples and the `< Examples` navigation item are removed.
-- Primary interactions tested: opening from the white interactive-glass `+`, blank disabled Add, entering a name enables Add, and Cancel dismisses without creating a tracker.
-- Full-view comparison: no actionable P0, P1, or P2 mismatch remains for the requested header and sheet-surface treatment.
-- Focused region comparison: the full-height normalized comparison keeps the header and first form controls readable, so a separate crop was unnecessary.
-
-**Icon Picker Refinement**
-
-- Source visual truth: `/var/folders/_b/g355wxdn0xqc1f5cr2b49p8c0000gn/T/codex-clipboard-310e6918-0e06-4790-895d-774c686a97e8.png` and `/var/folders/_b/g355wxdn0xqc1f5cr2b49p8c0000gn/T/codex-clipboard-b3efccbd-a971-442e-ad3e-4cba0373ddf6.png`.
-- Implementation screenshots: `/var/folders/_b/g355wxdn0xqc1f5cr2b49p8c0000gn/T/screenshot_optimized_b08e447f-416e-4aaa-a255-6a752bbffed1.jpg` and `/var/folders/_b/g355wxdn0xqc1f5cr2b49p8c0000gn/T/screenshot_optimized_539c62dc-86bf-4429-9d20-e44bcf3c0a86.jpg`.
-- Combined comparison: `/Users/ben/Code/Tracky/design-qa-icon-picker.jpg`.
-- Viewport and normalization: both 1206 × 2622 references were normalized to the existing 368 × 800 Codex iPhone 17 Simulator viewport; implementation captures were native 368 × 800.
-- State: blank New Tracker editor with a selected Computer preview, followed by the Choose Icon sheet with the General selection active.
-- Fonts and typography: compact centered headers and native labels preserve the reference hierarchy with SF typography.
-- Spacing and layout rhythm: the icon preview now leads the form, the Name field uses a continuous pill radius, and the icon picker uses spacious grouped cards with circular choices.
-- Colors and visual tokens: the monochrome raised sheet, grouped surfaces, white icons, and selection ring stay within Tracky’s approved restrained system.
-- Image and icon fidelity: every visible icon comes from Tracky’s existing Hugeicons mapping. The picker intentionally exposes the app’s current 12-icon vocabulary rather than inventing unsupported tracker types to match the reference count.
-- Copy and content: the redundant daily-check-in helper is removed. Categories are named General, Wellness, and Work & Interests.
-- Primary interactions tested: opening the second native sheet, selecting Computer and confirming, reopening, selecting Music and cancelling, and verifying Computer remains selected.
-- Full-view comparison: no actionable P0, P1, or P2 mismatch remains for the requested preview, picker, rounded input, and two-sheet interaction.
-- Focused region comparison: the four-panel comparison leaves the header, preview, grouped icon cards, and selection treatments readable without a separate crop.
-- Stacked-sheet implementation screenshot: `/var/folders/_b/g355wxdn0xqc1f5cr2b49p8c0000gn/T/screenshot_optimized_c970bc2b-5392-438a-9853-5ad0343d4a29.jpg`.
-- Stacked-sheet behavior: Choose Icon is now physically nested inside New Tracker's native sheet content, so iOS presents it as a second sheet while preserving and recessing the first presentation. Dismissing or confirming the icon picker removes only the top sheet and returns to the same draft.
-- Stacked-sheet interaction tested: entered `Draft survives`, opened Choose Icon, selected Heart, confirmed, and verified the New Tracker sheet remained presented with the draft text intact. The runtime accessibility snapshot contained both sheet hierarchies while the picker was open, confirming this is a native presentation stack rather than a screen replacement.
+## Final result
 
 final result: passed

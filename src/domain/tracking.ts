@@ -127,6 +127,25 @@ export function localDateKey(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
+export function currentStreak(
+  daysWithEntries: Set<string>,
+  now = new Date(),
+) {
+  const cursor = new Date(now);
+  cursor.setHours(12, 0, 0, 0);
+
+  if (!daysWithEntries.has(localDateKey(cursor))) {
+    cursor.setDate(cursor.getDate() - 1);
+  }
+
+  let streak = 0;
+  while (daysWithEntries.has(localDateKey(cursor))) {
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
+}
+
 export function groupEventsByDate(events: TrackedEvent[]) {
   const groups = new Map<string, TrackedEvent[]>();
   for (const event of [...events].sort(

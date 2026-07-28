@@ -1,4 +1,7 @@
-import { Tick02Icon } from '@hugeicons/core-free-icons';
+import {
+  Add01Icon,
+  Tick02Icon,
+} from '@hugeicons/core-free-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
@@ -21,6 +24,7 @@ import {
 } from '../src/design/theme';
 import type { TrackedEvent } from '../src/domain/models';
 import {
+  currentStreak,
   eventsInTimeframe,
   localDateKey,
 } from '../src/domain/tracking';
@@ -89,15 +93,7 @@ export default function TrackerDetailSheet() {
   const daysWithEntries = new Set(
     trackerEvents.map((event) => localDateKey(new Date(event.occurredAt))),
   );
-  const lastSevenDays = Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(now);
-    date.setHours(12, 0, 0, 0);
-    date.setDate(date.getDate() - index);
-    return date;
-  });
-  const consistency = lastSevenDays.filter((date) =>
-    daysWithEntries.has(localDateKey(date)),
-  ).length;
+  const streak = currentStreak(daysWithEntries, now);
 
   const toggleCompletion = () => {
     const result = toggleTrackerCheckIn(tracker.id);
@@ -134,15 +130,7 @@ export default function TrackerDetailSheet() {
         showsVerticalScrollIndicator={false}
         style={styles.scroll}
       >
-        <View
-          style={[
-            styles.statusCard,
-            {
-              backgroundColor: theme.colors.surface,
-              borderColor: theme.colors.border,
-            },
-          ]}
-        >
+        <View style={styles.hero}>
           <View
             style={[
               styles.heroIcon,
@@ -152,7 +140,7 @@ export default function TrackerDetailSheet() {
                   ? resolveHabitColor(tracker.color, theme.dark)
                   : theme.colors.border,
                 borderWidth: completedToday
-                  ? 3
+                  ? 5
                   : StyleSheet.hairlineWidth,
               },
             ]}
@@ -160,47 +148,44 @@ export default function TrackerDetailSheet() {
             <TrackerIcon
               color={theme.colors.text}
               name={tracker.icon}
-              size={25}
+              size={44}
             />
           </View>
-          <View style={styles.statusCopy}>
-            <Text style={[typography.section, { color: theme.colors.text }]}>
-              {tracker.name}
-            </Text>
-            <Text
-              style={[typography.caption, { color: theme.colors.textSecondary }]}
-            >
-              {completedToday ? 'Done today' : 'Not done today'}
-            </Text>
-          </View>
+          <Text style={[typography.section, { color: theme.colors.text }]}>
+            {tracker.name}
+          </Text>
         </View>
 
-        <View style={styles.section}>
-          <Text
-            style={[
-              typography.label,
-              styles.sectionTitle,
-              { color: theme.colors.textSecondary },
-            ]}
-          >
-            CONSISTENCY
-          </Text>
+        <View
+          accessibilityLabel={`${streak} day streak, ${trackerEvents.length} check-ins`}
+          style={[
+            styles.statsCard,
+            {
+              backgroundColor: theme.colors.surface,
+              borderColor: theme.colors.border,
+            },
+          ]}
+        >
+          <View style={styles.stat}>
+            <Text style={[styles.statValue, { color: theme.colors.text }]}>
+              {streak}
+            </Text>
+            <Text style={[typography.label, { color: theme.colors.textSecondary }]}>
+              Streak
+            </Text>
+          </View>
           <View
             style={[
-              styles.consistencyRow,
-              {
-                backgroundColor: theme.colors.surface,
-                borderColor: theme.colors.border,
-              },
+              styles.statDivider,
+              { backgroundColor: theme.colors.separator },
             ]}
-          >
-            <Text style={[typography.cardTitle, { color: theme.colors.text }]}>
-              {consistency} of the last 7 days
+          />
+          <View style={styles.stat}>
+            <Text style={[styles.statValue, { color: theme.colors.text }]}>
+              {trackerEvents.length}
             </Text>
-            <Text
-              style={[typography.caption, { color: theme.colors.textSecondary }]}
-            >
-              with an entry
+            <Text style={[typography.label, { color: theme.colors.textSecondary }]}>
+              Check Ins
             </Text>
           </View>
         </View>
@@ -313,9 +298,16 @@ export default function TrackerDetailSheet() {
               size={18}
               strokeWidth={2}
             />
-          ) : null}
+          ) : (
+            <Icon
+              color={theme.colors.onAccent}
+              icon={Add01Icon}
+              size={20}
+              strokeWidth={2}
+            />
+          )}
           <Text style={[typography.label, { color: theme.colors.onAccent }]}>
-            {completedToday ? 'Completed today' : 'Mark complete'}
+            {completedToday ? 'Undo Check In' : 'Check In'}
           </Text>
         </Pressable>
       </View>
@@ -427,35 +419,48 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     paddingBottom: 128,
   },
-  statusCard: {
+  hero: {
     alignItems: 'center',
-    borderRadius: radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    flexDirection: 'row',
     gap: spacing.md,
-    minHeight: 92,
-    padding: spacing.md,
+    paddingBottom: spacing.sm,
+    paddingTop: spacing.lg,
   },
   heroIcon: {
     alignItems: 'center',
     borderRadius: radius.pill,
-    height: 52,
+    height: 116,
     justifyContent: 'center',
-    width: 52,
+    width: 116,
   },
-  statusCopy: { flex: 1, gap: spacing.xxs },
+  statsCard: {
+    alignItems: 'center',
+    borderRadius: radius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    minHeight: 100,
+    paddingVertical: spacing.md,
+  },
+  stat: {
+    alignItems: 'center',
+    flex: 1,
+    gap: spacing.xxs,
+    justifyContent: 'center',
+  },
+  statDivider: {
+    height: 44,
+    width: StyleSheet.hairlineWidth,
+  },
+  statValue: {
+    fontSize: 28,
+    fontWeight: '600',
+    letterSpacing: -0.4,
+  },
   section: { gap: spacing.xs },
   sectionTitle: {
     fontSize: 12,
     fontWeight: '500',
     letterSpacing: -0.15,
     paddingHorizontal: spacing.xs,
-  },
-  consistencyRow: {
-    borderRadius: radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    gap: spacing.xxs,
-    padding: spacing.md,
   },
   calendar: {
     borderRadius: radius.md,
