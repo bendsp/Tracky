@@ -115,10 +115,10 @@ export function NativeMenuPicker<T extends string>({
       colorScheme={theme.scheme}
       matchContents={{ vertical: true }}
       seedColor={theme.colors.accent}
-      style={styles.fullWidth}
+      style={styles.detailMenu}
     >
       <Picker
-        label={label || accessibilityLabel}
+        label={accessibilityLabel}
         modifiers={[
           nativeAccessibilityLabel(accessibilityLabel),
           pickerStyle('menu'),
@@ -225,6 +225,10 @@ const styles = StyleSheet.create({
     height: 36,
     minWidth: 96,
     overflow: 'hidden',
+  },
+  detailMenu: {
+    height: 44,
+    minWidth: 96,
   },
   fullWidth: { width: '100%' },
   nativePicker: { height: 34 },

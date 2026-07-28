@@ -157,7 +157,10 @@ export function TrackerEditorForm({
               },
             ]}
           >
-            <View style={styles.goalRow}>
+            <View style={styles.targetRow}>
+              <Text style={[styles.rowLabelText, { color: theme.colors.text }]}>
+                Times
+              </Text>
               <View
                 accessibilityLabel={`${draft.goal.targetCount} times every ${goalPeriodLabels[draft.goal.period]}`}
                 style={[
@@ -241,15 +244,19 @@ export function TrackerEditorForm({
                   />
                 </Pressable>
               </View>
-              <Text
-                numberOfLines={1}
-                style={[styles.timesEvery, { color: theme.colors.text }]}
-              >
-                times every
+            </View>
+            <View
+              style={[
+                styles.goalDivider,
+                { backgroundColor: theme.colors.separator },
+              ]}
+            />
+            <View style={styles.periodRow}>
+              <Text style={[styles.rowLabelText, { color: theme.colors.text }]}>
+                Every
               </Text>
               <NativeMenuPicker<TrackerGoalPeriod>
                 accessibilityLabel="Goal period"
-                compact
                 label={goalPeriodLabels[draft.goal.period]}
                 onSelectionChange={(period) => {
                   selectionHaptic();
@@ -391,11 +398,17 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: spacing.md,
   },
-  goalRow: {
+  targetRow: {
     alignItems: 'center',
     flexDirection: 'row',
-    gap: spacing.xs,
     height: 56,
+    justifyContent: 'space-between',
+  },
+  periodRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    height: 56,
+    justifyContent: 'space-between',
   },
   stepper: {
     alignItems: 'center',
@@ -418,13 +431,6 @@ const styles = StyleSheet.create({
     letterSpacing: -0.15,
     minWidth: 24,
     textAlign: 'center',
-  },
-  timesEvery: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '400',
-    letterSpacing: -0.15,
-    lineHeight: 21,
   },
   goalDivider: {
     height: StyleSheet.hairlineWidth,
