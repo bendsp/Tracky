@@ -5,6 +5,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { spacing, type as typography } from '../src/design/theme';
 import { nativeSheetOptions } from '../src/navigation/nativeSheetOptions';
+import { TrackerEditorSessionProvider } from '../src/store/TrackerEditorSession';
 import { useTracky, TrackyProvider } from '../src/store/TrackyProvider';
 import { RevenueCatProvider } from '../src/subscriptions/RevenueCatProvider';
 
@@ -78,6 +79,18 @@ function RootNavigator() {
           name="log-tracker"
           options={formSheetOptions}
         />
+        <Stack.Screen
+          name="tracker-editor"
+          options={formSheetOptions}
+        />
+        <Stack.Screen
+          name="tracker-icon-picker"
+          options={formSheetOptions}
+        />
+        <Stack.Screen
+          name="tracker-start-date"
+          options={formSheetOptions}
+        />
       </Stack>
       {saveError ? (
         <Pressable
@@ -105,9 +118,11 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <TrackyProvider>
-        <RevenueCatProvider>
-          <RootNavigator />
-        </RevenueCatProvider>
+        <TrackerEditorSessionProvider>
+          <RevenueCatProvider>
+            <RootNavigator />
+          </RevenueCatProvider>
+        </TrackerEditorSessionProvider>
       </TrackyProvider>
     </GestureHandlerRootView>
   );

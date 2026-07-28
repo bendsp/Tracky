@@ -3,18 +3,19 @@ import {
   Tick02Icon,
 } from '@hugeicons/core-free-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import {
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 
 import { Icon } from '../src/components/Icon';
-import { NativeSheetScreen } from '../src/components/NativeSheetScreen';
-import { TrackerEditorSheet } from '../src/components/tracking/TrackerEditorSheet';
+import {
+  NativeSheetScreen,
+  NativeSheetScrollView,
+} from '../src/components/NativeSheetScreen';
 import { TrackerIcon } from '../src/components/tracking/TrackerIcon';
 import {
   radius,
@@ -29,6 +30,7 @@ import {
   trackerGoalStatus,
 } from '../src/domain/tracking';
 import { useTimeframeNow } from '../src/hooks/useTimeframeNow';
+import { useTrackerEditorSession } from '../src/store/TrackerEditorSession';
 import { useTracky } from '../src/store/TrackyProvider';
 import { successHaptic, tapHaptic } from '../src/utils/haptics';
 
@@ -53,9 +55,9 @@ export default function TrackerDetailSheet() {
   const { trackerId } = useLocalSearchParams<{ trackerId?: string }>();
   const router = useRouter();
   useTimeframeNow();
+  const trackerEditor = useTrackerEditorSession();
   const now = new Date();
   const { events, theme, toggleTrackerCheckIn, trackers } = useTracky();
-  const [editorOpen, setEditorOpen] = useState(false);
   const tracker = trackers.find((candidate) => candidate.id === trackerId);
   const trackerEvents = useMemo(
     () =>
@@ -118,17 +120,15 @@ export default function TrackerDetailSheet() {
           icon="ellipsis"
           onPress={() => {
             tapHaptic();
-            setEditorOpen(true);
+            trackerEditor.begin(tracker);
+            router.push('/tracker-editor');
           }}
           separateBackground
         />
       </Stack.Toolbar>
 
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
+      <NativeSheetScrollView
         contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-        style={styles.scroll}
       >
         <View style={styles.hero}>
           <View
@@ -271,7 +271,7 @@ export default function TrackerDetailSheet() {
             </View>
           )}
         </View>
-      </ScrollView>
+      </NativeSheetScrollView>
 
       <View pointerEvents="box-none" style={styles.footer}>
         <Pressable
@@ -312,11 +312,6 @@ export default function TrackerDetailSheet() {
         </Pressable>
       </View>
 
-      <TrackerEditorSheet
-        onClose={() => setEditorOpen(false)}
-        tracker={tracker}
-        visible={editorOpen}
-      />
     </NativeSheetScreen>
   );
 }
@@ -413,7 +408,6 @@ function MonthHistory({
 }
 
 const styles = StyleSheet.create({
-  scroll: { flex: 1 },
   content: {
     gap: spacing.xl,
     padding: spacing.md,

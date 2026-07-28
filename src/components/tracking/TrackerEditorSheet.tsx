@@ -6,29 +6,21 @@ import {
   PencilEdit02Icon,
   Tick02Icon,
 } from '@hugeicons/core-free-icons';
-import { useEffect, useState } from 'react';
 import {
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 
 import {
-  defaultHabitColor,
   habitColors,
-  normalizeHabitColor,
   radius,
   resolveHabitColor,
   spacing,
   type as typography,
 } from '../../design/theme';
-import type {
-  Tracker,
-  TrackerDraft,
-  TrackerGoalPeriod,
-} from '../../domain/models';
+import type { TrackerDraft, TrackerGoalPeriod } from '../../domain/models';
 import {
   goalPeriodLabels,
   localDateKey,
@@ -38,115 +30,38 @@ import { selectionHaptic } from '../../utils/haptics';
 import { Field } from '../Form';
 import { GlassButton } from '../GlassButton';
 import { Icon } from '../Icon';
+import { NativeSheetScrollView } from '../NativeSheetScreen';
 import {
   NativeMenuPicker,
 } from '../NativeControls';
-import { Sheet } from '../Sheet';
 import { TrackerIcon } from './TrackerIcon';
-import { TrackerIconPickerSheet } from './TrackerIconPickerSheet';
-import { TrackerStartDateSheet } from './TrackerStartDateSheet';
 
-function baseSummary(): TrackerDraft['summary'] {
-  return {
-    calculation: 'count',
-    timeframe: 'today',
-    countLabel: 'check-ins',
-  };
-}
-
-function newDraft(): TrackerDraft {
-  return {
-    name: '',
-    icon: 'star',
-    color: defaultHabitColor,
-    goal: {
-      targetCount: 1,
-      period: 'day',
-      startDate: localDateKey(new Date()),
-    },
-    fields: [],
-    summary: baseSummary(),
-  };
-}
-
-function editableDraft(tracker: Tracker): TrackerDraft {
-  return {
-    name: tracker.name,
-    icon: tracker.icon,
-    color: normalizeHabitColor(tracker.color),
-    goal: { ...tracker.goal },
-    fields: tracker.fields.map((field) =>
-      field.type === 'choice'
-        ? { ...field, choices: [...field.choices] }
-        : { ...field },
-    ),
-    summary: { ...tracker.summary },
-  };
-}
-
-export function TrackerEditorSheet({
-  onClose,
-  tracker,
-  visible,
+export function TrackerEditorForm({
+  draft,
+  onChooseIcon,
+  onChooseStartDate,
+  onDraftChange,
 }: {
-  onClose: () => void;
-  tracker?: Tracker | null;
-  visible: boolean;
+  draft: TrackerDraft;
+  onChooseIcon: () => void;
+  onChooseStartDate: () => void;
+  onDraftChange: (
+    update: TrackerDraft | ((current: TrackerDraft) => TrackerDraft),
+  ) => void;
 }) {
-  const { createTracker, theme, updateTracker } = useTracky();
-  const [draft, setDraft] = useState<TrackerDraft>(newDraft);
-  const [iconPickerOpen, setIconPickerOpen] = useState(false);
-  const [startDatePickerOpen, setStartDatePickerOpen] = useState(false);
-
-  useEffect(() => {
-    if (!visible) return;
-    setIconPickerOpen(false);
-    setStartDatePickerOpen(false);
-    setDraft(tracker ? editableDraft(tracker) : newDraft());
-  }, [tracker, visible]);
-
-  const save = () => {
-    if (!draft.name.trim()) return;
-    const simpleDraft: TrackerDraft = tracker
-      ? {
-          ...draft,
-          fields: tracker.fields,
-          summary: tracker.summary,
-        }
-      : {
-          ...draft,
-          fields: [],
-          summary: baseSummary(),
-        };
-    if (tracker) updateTracker(tracker.id, simpleDraft);
-    else createTracker(simpleDraft);
-    onClose();
-  };
+  const { theme } = useTracky();
 
   return (
-    <Sheet
-      confirmDisabled={!draft.name.trim()}
-      confirmLabel={tracker ? 'Save' : 'Add'}
-      onClose={onClose}
-      onConfirm={save}
-      size="large"
-      title={tracker ? 'Edit Tracker' : 'New Tracker'}
-      visible={visible}
+    <NativeSheetScrollView
+      automaticallyAdjustKeyboardInsets
+      contentContainerStyle={styles.form}
     >
-      <ScrollView
-        automaticallyAdjustKeyboardInsets
-        contentContainerStyle={styles.form}
-        keyboardDismissMode="interactive"
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-        style={styles.viewport}
-      >
         <View style={styles.iconPreviewArea}>
           <Pressable
             accessibilityHint="Opens the icon picker"
             accessibilityLabel="Choose tracker icon"
             accessibilityRole="button"
-            onPress={() => setIconPickerOpen(true)}
+            onPress={onChooseIcon}
             style={({ pressed }) => [
               styles.iconPreview,
               {
@@ -167,7 +82,7 @@ export function TrackerEditorSheet({
               accessibilityLabel="Choose tracker icon"
               compact
               icon={PencilEdit02Icon}
-              onPress={() => setIconPickerOpen(true)}
+              onPress={onChooseIcon}
             />
           </View>
         </View>
@@ -176,7 +91,7 @@ export function TrackerEditorSheet({
           autoCapitalize="sentences"
           label="Name"
           onChangeText={(name) =>
-            setDraft((current) => ({ ...current, name }))
+            onDraftChange((current) => ({ ...current, name }))
           }
           pill
           placeholder="Read, stretch, call Mum…"
@@ -199,7 +114,7 @@ export function TrackerEditorSheet({
                   key={option.value}
                   onPress={() => {
                     selectionHaptic();
-                    setDraft((current) => ({
+                    onDraftChange((current) => ({
                       ...current,
                       color: option.value,
                     }));
@@ -261,7 +176,7 @@ export function TrackerEditorSheet({
                   hitSlop={6}
                   onPress={() => {
                     selectionHaptic();
-                    setDraft((current) => ({
+                    onDraftChange((current) => ({
                       ...current,
                       goal: {
                         ...current.goal,
@@ -302,7 +217,7 @@ export function TrackerEditorSheet({
                   hitSlop={6}
                   onPress={() => {
                     selectionHaptic();
-                    setDraft((current) => ({
+                    onDraftChange((current) => ({
                       ...current,
                       goal: {
                         ...current.goal,
@@ -338,7 +253,7 @@ export function TrackerEditorSheet({
                 label={goalPeriodLabels[draft.goal.period]}
                 onSelectionChange={(period) => {
                   selectionHaptic();
-                  setDraft((current) => ({
+                  onDraftChange((current) => ({
                     ...current,
                     goal: { ...current.goal, period },
                   }));
@@ -364,7 +279,7 @@ export function TrackerEditorSheet({
               accessibilityRole="button"
               onPress={() => {
                 selectionHaptic();
-                setStartDatePickerOpen(true);
+                onChooseStartDate();
               }}
               style={({ pressed }) => [
                 styles.startDateRow,
@@ -408,30 +323,7 @@ export function TrackerEditorSheet({
             </Pressable>
           </View>
         </View>
-      </ScrollView>
-      <TrackerIconPickerSheet
-        onClose={() => setIconPickerOpen(false)}
-        onSelect={(icon) =>
-          setDraft((current) => ({
-            ...current,
-            icon,
-          }))
-        }
-        selected={draft.icon}
-        visible={iconPickerOpen}
-      />
-      <TrackerStartDateSheet
-        onClose={() => setStartDatePickerOpen(false)}
-        onSelect={(startDate) =>
-          setDraft((current) => ({
-            ...current,
-            goal: { ...current.goal, startDate },
-          }))
-        }
-        selected={draft.goal.startDate}
-        visible={startDatePickerOpen}
-      />
-    </Sheet>
+    </NativeSheetScrollView>
   );
 }
 
@@ -454,10 +346,8 @@ function formattedStartDate(value: string) {
 }
 
 const styles = StyleSheet.create({
-  viewport: { flex: 1 },
   form: {
     gap: spacing.xl,
-    paddingBottom: spacing.xxxl,
   },
   iconPreviewArea: {
     alignItems: 'center',

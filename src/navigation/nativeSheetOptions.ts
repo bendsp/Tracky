@@ -11,12 +11,9 @@ export function nativeSheetOptions(
     headerShadowVisible: false,
     headerShown: true,
     headerTintColor: theme.colors.text,
-    headerTransparent: true,
     presentation: 'formSheet',
     scrollEdgeEffects: { top: 'soft' },
     sheetAllowedDetents: [1],
-    sheetCornerRadius: 40,
     sheetGrabberVisible: false,
-    sheetInitialDetentIndex: 0,
   };
 }

@@ -1,11 +1,5 @@
 import {
-  Cancel01Icon,
-  Tick02Icon,
-} from '@hugeicons/core-free-icons';
-import { useEffect, useState } from 'react';
-import {
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -19,7 +13,7 @@ import {
 import type { TrackerIconName } from '../../domain/models';
 import { useTracky } from '../../store/TrackyProvider';
 import { selectionHaptic } from '../../utils/haptics';
-import { Sheet } from '../Sheet';
+import { NativeSheetScrollView } from '../NativeSheetScreen';
 import {
   TrackerIcon,
   trackerIconOptions,
@@ -47,44 +41,19 @@ const labels = new Map(
   trackerIconOptions.map((option) => [option.value, option.label]),
 );
 
-export function TrackerIconPickerSheet({
-  onClose,
+export function TrackerIconPicker({
   onSelect,
   selected,
-  visible,
 }: {
-  onClose: () => void;
   onSelect: (icon: TrackerIconName) => void;
   selected: TrackerIconName;
-  visible: boolean;
 }) {
   const { theme } = useTracky();
-  const [pending, setPending] = useState(selected);
-
-  useEffect(() => {
-    if (visible) setPending(selected);
-  }, [selected, visible]);
 
   return (
-    <Sheet
-      cancelIcon={Cancel01Icon}
-      cancelLabel="Cancel icon selection"
-      confirmIcon={Tick02Icon}
-      confirmLabel="Choose icon"
-      confirmProminent
-      onClose={onClose}
-      onConfirm={() => {
-        onSelect(pending);
-        onClose();
-      }}
-      size="large"
-      title="Choose Icon"
-      visible={visible}
+    <NativeSheetScrollView
+      contentContainerStyle={styles.content}
     >
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
         {iconGroups.map((group) => (
           <View
             key={group.title}
@@ -104,7 +73,7 @@ export function TrackerIconPickerSheet({
             </Text>
             <View style={styles.grid}>
               {group.icons.map((icon) => {
-                const isSelected = pending === icon;
+                const isSelected = selected === icon;
                 return (
                   <Pressable
                     accessibilityLabel={`${labels.get(icon) ?? icon} icon`}
@@ -113,7 +82,7 @@ export function TrackerIconPickerSheet({
                     key={icon}
                     onPress={() => {
                       selectionHaptic();
-                      setPending(icon);
+                      onSelect(icon);
                     }}
                     style={({ pressed }) => [
                       styles.iconChoice,
@@ -137,17 +106,16 @@ export function TrackerIconPickerSheet({
             </View>
           </View>
         ))}
-      </ScrollView>
-    </Sheet>
+    </NativeSheetScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   content: {
     gap: spacing.lg,
-    paddingBottom: spacing.xxxl,
   },
   group: {
+    alignSelf: 'stretch',
     borderRadius: radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
     gap: spacing.lg,

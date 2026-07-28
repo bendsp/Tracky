@@ -1,15 +1,17 @@
-import { Cancel01Icon, Tick02Icon } from '@hugeicons/core-free-icons';
+import { Tick02Icon } from '@hugeicons/core-free-icons';
 import { Stack, useRouter } from 'expo-router';
 import {
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 
 import { Icon } from '../src/components/Icon';
-import { NativeSheetScreen } from '../src/components/NativeSheetScreen';
+import {
+  NativeSheetScreen,
+  NativeSheetScrollView,
+} from '../src/components/NativeSheetScreen';
 import { TrackerIcon } from '../src/components/tracking/TrackerIcon';
 import {
   radius,
@@ -35,34 +37,21 @@ export default function LogTrackerSheet() {
 
   return (
     <NativeSheetScreen>
-      <Stack.Screen
-        options={{
-          headerLeft: () => (
-            <Pressable
-              accessibilityLabel="Close"
-              accessibilityRole="button"
-              hitSlop={10}
-              onPress={() => {
-                tapHaptic();
-                router.back();
-              }}
-              style={styles.headerIcon}
-            >
-              <Icon
-                color={theme.colors.text}
-                icon={Cancel01Icon}
-                size={21}
-              />
-            </Pressable>
-          ),
-          title: 'Check In',
-        }}
-      />
+      <Stack.Screen options={{ title: 'Check In' }} />
+      <Stack.Toolbar placement="left">
+        <Stack.Toolbar.Button
+          accessibilityLabel="Close check in"
+          icon="xmark"
+          onPress={() => {
+            tapHaptic();
+            router.back();
+          }}
+          separateBackground
+        />
+      </Stack.Toolbar>
 
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
+      <NativeSheetScrollView
         contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
       >
         <Text
           style={[
@@ -170,22 +159,15 @@ export default function LogTrackerSheet() {
             Create a tracker before checking in.
           </Text>
         )}
-      </ScrollView>
+      </NativeSheetScrollView>
     </NativeSheetScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  headerIcon: {
-    alignItems: 'center',
-    height: 40,
-    justifyContent: 'center',
-    width: 40,
-  },
   content: {
     gap: spacing.xs,
-    padding: spacing.md,
-    paddingBottom: spacing.xxxl,
+    paddingTop: spacing.md,
   },
   sectionTitle: {
     fontSize: 12,

@@ -4,7 +4,7 @@ import {
   Tick02Icon,
 } from '@hugeicons/core-free-icons';
 import { Stack, useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -17,7 +17,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../../../src/components/Icon';
 import { GlassButton } from '../../../src/components/GlassButton';
 import { ScreenHeader } from '../../../src/components/Screen';
-import { TrackerEditorSheet } from '../../../src/components/tracking/TrackerEditorSheet';
 import { TrackerIcon } from '../../../src/components/tracking/TrackerIcon';
 import {
   radius,
@@ -29,6 +28,7 @@ import {
 import type { TrackedEvent, Tracker } from '../../../src/domain/models';
 import { trackerGoalStatus } from '../../../src/domain/tracking';
 import { useTimeframeNow } from '../../../src/hooks/useTimeframeNow';
+import { useTrackerEditorSession } from '../../../src/store/TrackerEditorSession';
 import { useTracky } from '../../../src/store/TrackyProvider';
 import { successHaptic, tapHaptic } from '../../../src/utils/haptics';
 
@@ -44,8 +44,8 @@ export default function TodayScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   useTimeframeNow();
+  const trackerEditor = useTrackerEditorSession();
   const { events, theme, toggleTrackerCheckIn, trackers } = useTracky();
-  const [editorOpen, setEditorOpen] = useState(false);
 
   const orderedTrackers = useMemo(() => trackers, [trackers]);
 
@@ -80,7 +80,8 @@ export default function TodayScreen() {
             icon={Add01Icon}
             onPress={() => {
               tapHaptic();
-              setEditorOpen(true);
+              trackerEditor.begin();
+              router.push('/tracker-editor');
             }}
             prominent
           />
@@ -144,7 +145,8 @@ export default function TodayScreen() {
               accessibilityRole="button"
               onPress={() => {
                 tapHaptic();
-                setEditorOpen(true);
+                trackerEditor.begin();
+                router.push('/tracker-editor');
               }}
               style={[
                 styles.emptyButton,
@@ -165,10 +167,6 @@ export default function TodayScreen() {
 
       </ScrollView>
 
-      <TrackerEditorSheet
-        onClose={() => setEditorOpen(false)}
-        visible={editorOpen}
-      />
     </View>
   );
 }
