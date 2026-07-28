@@ -8,7 +8,6 @@ import {
 } from '@expo/ui/swift-ui';
 import {
   ignoreSafeArea,
-  presentationBackground,
   presentationDetents,
   presentationDragIndicator,
 } from '@expo/ui/swift-ui/modifiers';
@@ -71,7 +70,6 @@ export function Sheet({
       >
         <Group
           modifiers={[
-            presentationBackground(theme.colors.sheetBackground),
             presentationDragIndicator('hidden'),
             ...(size === 'large'
               ? [
@@ -86,10 +84,7 @@ export function Sheet({
               style={[
                 styles.sheet,
                 size === 'large' && styles.largeSheet,
-                {
-                  backgroundColor: theme.colors.sheetBackground,
-                  width,
-                },
+                { width },
               ]}
             >
               {hasActions ? (
