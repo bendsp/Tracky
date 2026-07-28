@@ -44,6 +44,11 @@ const currentState: PersistedTrackyState = {
       name: 'Water',
       icon: 'droplet',
       color: '#3578F6',
+      goal: {
+        targetCount: 1,
+        period: 'day',
+        startDate: '2026-07-21',
+      },
       fields: [
         {
           id: 'field_amount',
@@ -73,7 +78,7 @@ const currentState: PersistedTrackyState = {
     },
   ],
   appearance: 'system',
-  schemaVersion: 4,
+  schemaVersion: 5,
 };
 
 class MemoryStorage implements TrackyStringStorage {
@@ -108,14 +113,19 @@ describe('Tracky backup compatibility', () => {
     assert.equal(parsed.metadata.exportedAt, '2026-07-21T12:00:00.000Z');
   });
 
-  test('real schema 2 fixture migrates sequentially to schema 4', () => {
+  test('real schema 2 fixture migrates sequentially to schema 5', () => {
     const fixture = readFileSync(
       new URL('./fixtures/tracky-schema-v2.json', import.meta.url),
       'utf8',
     );
     const parsed = parseAndMigrateTrackyData(fixture);
 
-    assert.equal(parsed.state.schemaVersion, 4);
+    assert.equal(parsed.state.schemaVersion, 5);
+    assert.deepEqual(parsed.state.trackers[0].goal, {
+      targetCount: 1,
+      period: 'day',
+      startDate: '2026-07-20',
+    });
     assert.equal(parsed.state.trackers[0].fields[0].type, 'number');
     assert.equal(parsed.state.events[0].values.field_migrated_tracker_legacy_water, 500);
     assert.equal(
@@ -124,14 +134,15 @@ describe('Tracky backup compatibility', () => {
     );
   });
 
-  test('schema 3 data migrates to schema 4 without changing tracker data', () => {
+  test('schema 3 data migrates through schema 5 with a daily goal', () => {
     const schemaThree = {
       ...currentState,
+      trackers: currentState.trackers.map(({ goal: _goal, ...tracker }) => tracker),
       schemaVersion: 3,
     };
     const parsed = parseAndMigrateTrackyData(schemaThree);
 
-    assert.equal(parsed.state.schemaVersion, 4);
+    assert.equal(parsed.state.schemaVersion, 5);
     assert.deepEqual(parsed.state.trackers, currentState.trackers);
   });
 
@@ -160,7 +171,7 @@ describe('Tracky backup compatibility', () => {
     delete fixture.exportedAt;
 
     const parsed = parseAndMigrateTrackyData(fixture);
-    assert.equal(parsed.state.schemaVersion, 4);
+    assert.equal(parsed.state.schemaVersion, 5);
     assert.equal(parsed.state.events.length, 1);
   });
 

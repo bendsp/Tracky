@@ -27,7 +27,7 @@ import {
   type Theme,
 } from '../../../src/design/theme';
 import type { TrackedEvent, Tracker } from '../../../src/domain/models';
-import { eventsInTimeframe } from '../../../src/domain/tracking';
+import { trackerGoalStatus } from '../../../src/domain/tracking';
 import { useTimeframeNow } from '../../../src/hooks/useTimeframeNow';
 import { useTracky } from '../../../src/store/TrackyProvider';
 import { successHaptic, tapHaptic } from '../../../src/utils/haptics';
@@ -37,16 +37,7 @@ function trackerStatus(
   events: TrackedEvent[],
   now: Date,
 ) {
-  const todayEvents = eventsInTimeframe(
-    events.filter((event) => event.trackerId === tracker.id),
-    'today',
-    now,
-  );
-
-  return {
-    complete: todayEvents.length > 0,
-    detail: todayEvents.length ? 'Done today' : 'Not done',
-  };
+  return trackerGoalStatus(tracker, events, now);
 }
 
 export default function TodayScreen() {
@@ -69,7 +60,7 @@ export default function TodayScreen() {
   const toggleCompletion = (tracker: Tracker) => {
     const result = toggleTrackerCheckIn(tracker.id);
     if (result === 'completed') successHaptic();
-    else if (result === 'uncompleted') tapHaptic();
+    else if (result === 'uncompleted' || result === 'logged') tapHaptic();
   };
 
   return (
@@ -266,8 +257,8 @@ function TrackerRow({
       <Pressable
         accessibilityLabel={
           status.complete
-            ? `Mark ${tracker.name} not complete for today`
-            : `Mark ${tracker.name} complete for today`
+            ? `Undo the latest ${tracker.name} check-in`
+            : `Check in ${tracker.name}`
         }
         accessibilityRole="button"
         accessibilityState={{ selected: status.complete }}

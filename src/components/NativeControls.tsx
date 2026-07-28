@@ -1,13 +1,18 @@
+import DateTimePicker from '@expo/ui/community/datetime-picker';
 import {
+  Button,
   ColorPicker,
-  DatePicker,
   Host,
+  Menu,
   Picker,
   Text,
 } from '@expo/ui/swift-ui';
 import {
   accessibilityLabel as nativeAccessibilityLabel,
-  datePickerStyle,
+  buttonBorderShape,
+  buttonStyle,
+  controlSize,
+  frame,
   pickerStyle,
   tag,
 } from '@expo/ui/swift-ui/modifiers';
@@ -53,18 +58,57 @@ export function NativeSegmentedPicker<T extends string>({
 
 export function NativeMenuPicker<T extends string>({
   accessibilityLabel,
+  compact = false,
   label,
   onSelectionChange,
   options,
   selection,
 }: {
   accessibilityLabel: string;
+  compact?: boolean;
   label: string;
   onSelectionChange: (selection: T) => void;
   options: readonly { label: string; value: T }[];
   selection: T;
 }) {
   const { theme } = useTracky();
+
+  if (compact) {
+    return (
+      <Host
+        colorScheme={theme.scheme}
+        matchContents={{ vertical: true }}
+        seedColor={theme.colors.accent}
+        style={[
+          styles.compactMenu,
+          {
+            backgroundColor: theme.colors.surfaceMuted,
+            borderColor: theme.colors.border,
+          },
+        ]}
+      >
+        <Menu
+          label={label || accessibilityLabel}
+          modifiers={[
+            nativeAccessibilityLabel(accessibilityLabel),
+            frame({ height: 36, minWidth: 96 }),
+            controlSize('regular'),
+            buttonBorderShape('capsule'),
+            buttonStyle('bordered'),
+          ]}
+        >
+          {options.map((option) => (
+            <Button
+              key={option.value}
+              label={option.label}
+              onPress={() => onSelectionChange(option.value)}
+              systemImage={option.value === selection ? 'checkmark' : undefined}
+            />
+          ))}
+        </Menu>
+      </Host>
+    );
+  }
 
   return (
     <Host
@@ -104,28 +148,25 @@ export function NativeTimePicker({
   const { theme } = useTracky();
 
   return (
-    <Host
-      colorScheme={theme.scheme}
-      matchContents={{ vertical: true }}
-      seedColor={theme.colors.accent}
-      style={styles.fullWidth}
-    >
-      <DatePicker
-        displayedComponents={['hourAndMinute']}
-        modifiers={[datePickerStyle('compact')]}
-        onDateChange={onChange}
-        selection={value}
-        title={label}
-      />
-    </Host>
+    <DateTimePicker
+      accentColor={theme.colors.accent}
+      display="compact"
+      mode="time"
+      onValueChange={(_event, selectedDate) => onChange(selectedDate)}
+      style={styles.nativePicker}
+      themeVariant={theme.scheme}
+      value={value}
+    />
   );
 }
 
 export function NativeDatePicker({
+  compact = false,
   label,
   onChange,
   value,
 }: {
+  compact?: boolean;
   label: string;
   onChange: (value: Date) => void;
   value: Date;
@@ -133,20 +174,15 @@ export function NativeDatePicker({
   const { theme } = useTracky();
 
   return (
-    <Host
-      colorScheme={theme.scheme}
-      matchContents={{ vertical: true }}
-      seedColor={theme.colors.accent}
-      style={styles.fullWidth}
-    >
-      <DatePicker
-        displayedComponents={['date']}
-        modifiers={[datePickerStyle('compact')]}
-        onDateChange={onChange}
-        selection={value}
-        title={label}
-      />
-    </Host>
+    <DateTimePicker
+      accentColor={theme.colors.accent}
+      display="compact"
+      mode="date"
+      onValueChange={(_event, selectedDate) => onChange(selectedDate)}
+      style={compact ? styles.compactDate : styles.nativePicker}
+      themeVariant={theme.scheme}
+      value={value}
+    />
   );
 }
 
@@ -179,5 +215,17 @@ export function NativeColorPicker({
 }
 
 const styles = StyleSheet.create({
+  compactDate: {
+    height: 34,
+    width: 154,
+  },
+  compactMenu: {
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    height: 36,
+    minWidth: 96,
+    overflow: 'hidden',
+  },
   fullWidth: { width: '100%' },
+  nativePicker: { height: 34 },
 });

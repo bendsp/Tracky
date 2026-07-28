@@ -2,6 +2,7 @@ import type { AppearanceMode } from '../design/theme';
 
 export type EntityId = string;
 export type ISODateTime = string;
+export type LocalDate = string;
 export type HexColor = `#${string}`;
 
 export type EntityTimestamps = {
@@ -81,11 +82,20 @@ export type TrackerSummary =
       fieldId: EntityId;
     };
 
+export type TrackerGoalPeriod = 'day' | 'week' | 'month';
+
+export type TrackerGoal = {
+  targetCount: number;
+  period: TrackerGoalPeriod;
+  startDate: LocalDate;
+};
+
 export type Tracker = EntityTimestamps & {
   id: EntityId;
   name: string;
   icon: TrackerIconName;
   color: HexColor;
+  goal: TrackerGoal;
   fields: TrackerField[];
   summary: TrackerSummary;
 };
@@ -109,13 +119,13 @@ export type TrackyData = {
 
 export type PersistedTrackyState = TrackyData & {
   appearance: AppearanceMode;
-  schemaVersion: 4;
+  schemaVersion: 5;
 };
 
 export type TrackyBackupEnvelope = {
   format: 'tracky-backup';
   formatVersion: 1;
-  dataSchemaVersion: 4;
+  dataSchemaVersion: 5;
   appVersion: string;
   exportedAt: ISODateTime;
   payload: PersistedTrackyState;
@@ -135,7 +145,7 @@ export type TrackyBackupPreview = {
 
 export type TrackerDraft = Pick<
   Tracker,
-  'name' | 'icon' | 'color' | 'fields' | 'summary'
+  'name' | 'icon' | 'color' | 'goal' | 'fields' | 'summary'
 >;
 
 export type TrackerEntryDraft = Pick<

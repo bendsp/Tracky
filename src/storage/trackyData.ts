@@ -10,13 +10,14 @@ import {
   type TrackerDraft,
   type TrackerEntryValue,
   type TrackerField,
+  type TrackerGoal,
   type TrackerIconName,
   type TrackerSummary,
   type TrackyBackupEnvelope,
   type TrackyBackupPreview,
 } from '../domain/models';
 
-export const CURRENT_DATA_SCHEMA_VERSION = 4;
+export const CURRENT_DATA_SCHEMA_VERSION = 5;
 export const TRACKY_BACKUP_FORMAT_VERSION = 1;
 
 type UnknownRecord = Record<string, unknown>;
@@ -182,6 +183,27 @@ function readSummary(
   return null;
 }
 
+function readGoal(value: unknown): TrackerGoal | null {
+  if (
+    !isRecord(value) ||
+    typeof value.targetCount !== 'number' ||
+    !Number.isInteger(value.targetCount) ||
+    value.targetCount < 1 ||
+    value.targetCount > 99 ||
+    (value.period !== 'day' &&
+      value.period !== 'week' &&
+      value.period !== 'month') ||
+    !isLocalDate(value.startDate)
+  ) {
+    return null;
+  }
+  return {
+    targetCount: value.targetCount,
+    period: value.period,
+    startDate: value.startDate,
+  };
+}
+
 function readTracker(value: unknown): Tracker | null {
   if (
     !isRecord(value) ||
@@ -204,13 +226,15 @@ function readTracker(value: unknown): Tracker | null {
   }
 
   const summary = readSummary(value.summary, validFields);
-  if (!summary) return null;
+  const goal = readGoal(value.goal);
+  if (!summary || !goal) return null;
 
   return {
     id: value.id,
     name: value.name.trim(),
     icon: value.icon,
     color: value.color,
+    goal,
     fields: validFields,
     summary,
     createdAt: value.createdAt,
@@ -479,7 +503,7 @@ function migrateVersionTwoToThree(candidate: UnknownRecord): UnknownRecord {
   const legacyEvents = candidate.events.filter(isRecord);
   if (legacyEvents.length !== candidate.events.length) malformed();
 
-  const trackers: Tracker[] = [];
+  const trackers: Omit<Tracker, 'goal'>[] = [];
   const numberFields = new Map<string, string>();
 
   for (const raw of candidate.trackers) {
@@ -575,6 +599,27 @@ function migrateVersionThreeToFour(candidate: UnknownRecord): UnknownRecord {
   return { ...candidate, schemaVersion: 4 };
 }
 
+function migrateVersionFourToFive(candidate: UnknownRecord): UnknownRecord {
+  if (!Array.isArray(candidate.trackers)) malformed();
+  const trackers = candidate.trackers.map((tracker) => {
+    if (
+      !isRecord(tracker) ||
+      !isFiniteDate(tracker.createdAt)
+    ) {
+      malformed();
+    }
+    return {
+      ...tracker,
+      goal: {
+        targetCount: 1,
+        period: 'day',
+        startDate: tracker.createdAt.slice(0, 10),
+      },
+    };
+  });
+  return { ...candidate, trackers, schemaVersion: 5 };
+}
+
 const migrations: Record<
   number,
   (candidate: UnknownRecord) => UnknownRecord
@@ -582,6 +627,7 @@ const migrations: Record<
   1: migrateVersionOneToTwo,
   2: migrateVersionTwoToThree,
   3: migrateVersionThreeToFour,
+  4: migrateVersionFourToFive,
 };
 
 function readSchemaVersion(candidate: UnknownRecord) {
@@ -713,11 +759,13 @@ export function sanitizeTrackerDraft(draft: TrackerDraft): TrackerDraft | null {
     return null;
   }
   const summary = readSummary(draft.summary, validFields);
-  if (!summary) return null;
+  const goal = readGoal(draft.goal);
+  if (!summary || !goal) return null;
   return {
     name,
     icon: draft.icon,
     color: draft.color,
+    goal,
     fields: validFields,
     summary,
   };

@@ -11,8 +11,13 @@ import {
 import { Icon } from '../src/components/Icon';
 import { NativeSheetScreen } from '../src/components/NativeSheetScreen';
 import { TrackerIcon } from '../src/components/tracking/TrackerIcon';
-import { radius, spacing, type as typography } from '../src/design/theme';
-import { eventsInTimeframe } from '../src/domain/tracking';
+import {
+  radius,
+  resolveHabitColor,
+  spacing,
+  type as typography,
+} from '../src/design/theme';
+import { trackerGoalStatus } from '../src/domain/tracking';
 import { useTimeframeNow } from '../src/hooks/useTimeframeNow';
 import { useTracky } from '../src/store/TrackyProvider';
 import { successHaptic, tapHaptic } from '../src/utils/haptics';
@@ -25,7 +30,7 @@ export default function LogTrackerSheet() {
   const toggleCompletion = (trackerId: string) => {
     const result = toggleTrackerCheckIn(trackerId);
     if (result === 'completed') successHaptic();
-    else if (result === 'uncompleted') tapHaptic();
+    else if (result === 'uncompleted' || result === 'logged') tapHaptic();
   };
 
   return (
@@ -79,21 +84,17 @@ export default function LogTrackerSheet() {
             ]}
           >
             {trackers.map((tracker, index) => {
-              const done = eventsInTimeframe(
-                events.filter((event) => event.trackerId === tracker.id),
-                'today',
-                new Date(),
-              ).length > 0;
+              const status = trackerGoalStatus(tracker, events, new Date());
 
               return (
                 <Pressable
                   accessibilityLabel={
-                    done
-                      ? `Mark ${tracker.name} not complete for today`
-                      : `Mark ${tracker.name} complete for today`
+                    status.complete
+                      ? `Undo the latest ${tracker.name} check-in`
+                      : `Check in ${tracker.name}, ${status.detail}`
                   }
                   accessibilityRole="button"
-                  accessibilityState={{ selected: done }}
+                  accessibilityState={{ selected: status.complete }}
                   key={tracker.id}
                   onPress={() => toggleCompletion(tracker.id)}
                   style={({ pressed }) => [
@@ -135,23 +136,23 @@ export default function LogTrackerSheet() {
                         { color: theme.colors.textSecondary },
                       ]}
                     >
-                      {done ? 'Done today' : 'Not done'}
+                      {status.detail}
                     </Text>
                   </View>
                   <View
                     style={[
                       styles.check,
                       {
-                        backgroundColor: done
-                          ? theme.colors.accent
+                        backgroundColor: status.complete
+                          ? resolveHabitColor(tracker.color, theme.dark)
                           : theme.colors.backgroundRaised,
-                        borderColor: done
-                          ? theme.colors.accent
+                        borderColor: status.complete
+                          ? resolveHabitColor(tracker.color, theme.dark)
                           : theme.colors.border,
                       },
                     ]}
                   >
-                    {done ? (
+                    {status.complete ? (
                       <Icon
                         color={theme.colors.onAccent}
                         icon={Tick02Icon}

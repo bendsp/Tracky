@@ -3,6 +3,8 @@ import type {
   Tracker,
   TrackerEntryValue,
   TrackerField,
+  TrackerGoal,
+  TrackerGoalPeriod,
   TrackerSummaryTimeframe,
 } from './models';
 
@@ -10,6 +12,134 @@ export const timeframeLabels: Record<TrackerSummaryTimeframe, string> = {
   today: 'Today',
   thisWeek: 'This week',
 };
+
+export const goalPeriodLabels: Record<TrackerGoalPeriod, string> = {
+  day: 'Day',
+  week: 'Week',
+  month: 'Month',
+};
+
+export const goalPeriodStatusLabels: Record<TrackerGoalPeriod, string> = {
+  day: 'today',
+  week: 'this week',
+  month: 'this month',
+};
+
+function localDate(value: string) {
+  return new Date(`${value}T00:00:00`);
+}
+
+export function startOfGoalPeriod(period: TrackerGoalPeriod, date: Date) {
+  const start = new Date(date);
+  start.setHours(0, 0, 0, 0);
+  if (period === 'week') {
+    const weekday = start.getDay();
+    start.setDate(start.getDate() - (weekday === 0 ? 6 : weekday - 1));
+  } else if (period === 'month') {
+    start.setDate(1);
+  }
+  return start;
+}
+
+function moveGoalPeriod(
+  period: TrackerGoalPeriod,
+  date: Date,
+  amount: number,
+) {
+  const moved = new Date(date);
+  if (period === 'day') moved.setDate(moved.getDate() + amount);
+  else if (period === 'week') moved.setDate(moved.getDate() + amount * 7);
+  else moved.setMonth(moved.getMonth() + amount);
+  return moved;
+}
+
+export function eventsForGoal(
+  goal: TrackerGoal,
+  events: TrackedEvent[],
+  now = new Date(),
+) {
+  const goalStart = localDate(goal.startDate);
+  if (!Number.isFinite(goalStart.getTime()) || now < goalStart) return [];
+  const naturalStart = startOfGoalPeriod(goal.period, now);
+  const activeStart = new Date(
+    Math.max(naturalStart.getTime(), goalStart.getTime()),
+  );
+  const end = now.getTime();
+
+  return events.filter((event) => {
+    const occurredAt = new Date(event.occurredAt).getTime();
+    return (
+      Number.isFinite(occurredAt) &&
+      occurredAt >= activeStart.getTime() &&
+      occurredAt <= end
+    );
+  });
+}
+
+export function trackerGoalStatus(
+  tracker: Tracker,
+  allEvents: TrackedEvent[],
+  now = new Date(),
+) {
+  const events = eventsForGoal(
+    tracker.goal,
+    allEvents.filter((event) => event.trackerId === tracker.id),
+    now,
+  );
+  const count = events.length;
+  const complete = count >= tracker.goal.targetCount;
+  const periodLabel = goalPeriodStatusLabels[tracker.goal.period];
+  return {
+    complete,
+    count,
+    detail: complete
+      ? `Done ${periodLabel}`
+      : tracker.goal.targetCount === 1
+        ? `Not done ${periodLabel}`
+        : `${count} of ${tracker.goal.targetCount} ${periodLabel}`,
+    events,
+    targetCount: tracker.goal.targetCount,
+  };
+}
+
+export function currentGoalStreak(
+  tracker: Tracker,
+  allEvents: TrackedEvent[],
+  now = new Date(),
+) {
+  const goalStart = localDate(tracker.goal.startDate);
+  if (!Number.isFinite(goalStart.getTime()) || now < goalStart) return 0;
+  const trackerEvents = allEvents.filter(
+    (event) => event.trackerId === tracker.id,
+  );
+  let periodStart = startOfGoalPeriod(tracker.goal.period, now);
+
+  const countInPeriod = (start: Date) => {
+    const next = moveGoalPeriod(tracker.goal.period, start, 1);
+    const effectiveStart = Math.max(start.getTime(), goalStart.getTime());
+    return trackerEvents.filter((event) => {
+      const occurredAt = new Date(event.occurredAt).getTime();
+      return (
+        Number.isFinite(occurredAt) &&
+        occurredAt >= effectiveStart &&
+        occurredAt < next.getTime() &&
+        occurredAt <= now.getTime()
+      );
+    }).length;
+  };
+
+  if (countInPeriod(periodStart) < tracker.goal.targetCount) {
+    periodStart = moveGoalPeriod(tracker.goal.period, periodStart, -1);
+  }
+
+  let streak = 0;
+  while (moveGoalPeriod(tracker.goal.period, periodStart, 1) > goalStart) {
+    if (countInPeriod(periodStart) < tracker.goal.targetCount) break;
+    streak += 1;
+    periodStart = moveGoalPeriod(tracker.goal.period, periodStart, -1);
+  }
+  return streak;
+}
 
 function startFor(timeframe: TrackerSummaryTimeframe, now: Date) {
   const start = new Date(now);

@@ -36,7 +36,10 @@ import {
   trackyHydrationErrorMessage,
 } from '../storage/trackyData';
 import { TrackyPersistenceQueue } from '../storage/TrackyPersistenceQueue';
-import { localDateKey } from '../domain/tracking';
+import {
+  localDateKey,
+  trackerGoalStatus,
+} from '../domain/tracking';
 
 type TrackyContextValue = PersistedTrackyState & {
   hydrated: boolean;
@@ -60,7 +63,7 @@ type TrackyContextValue = PersistedTrackyState & {
   toggleTrackerCheckIn: (
     trackerId: string,
     at?: Date,
-  ) => 'completed' | 'uncompleted' | null;
+  ) => 'logged' | 'completed' | 'uncompleted' | null;
   logEvent: (trackerId: string, draft: TrackerEntryDraft) => string;
   updateEvent: (eventId: string, draft: TrackerEntryDraft) => void;
   deleteEvent: (eventId: string) => void;
@@ -408,42 +411,50 @@ export function TrackyProvider({ children }: PropsWithChildren) {
   const toggleTrackerCheckIn = useCallback(
     (trackerId: string, at = new Date()) => {
       if (!Number.isFinite(at.getTime())) return null;
-      const dayKey = localDateKey(at);
       const snapshot = stateRef.current;
-      if (!snapshot.trackers.some((tracker) => tracker.id === trackerId)) {
-        return null;
-      }
-
-      const isTodayEvent = (event: PersistedTrackyState['events'][number]) =>
-        event.trackerId === trackerId &&
-        localDateKey(new Date(event.occurredAt)) === dayKey;
-      const completed = snapshot.events.some(isTodayEvent);
+      const tracker = snapshot.trackers.find(
+        (candidate) => candidate.id === trackerId,
+      );
+      if (!tracker || localDateKey(at) < tracker.goal.startDate) return null;
+      const before = trackerGoalStatus(tracker, snapshot.events, at);
       const timestamp = new Date().toISOString();
 
-      const nextState: PersistedTrackyState = completed
-        ? {
-            ...snapshot,
-            events: snapshot.events.filter((event) => !isTodayEvent(event)),
-          }
-        : {
-            ...snapshot,
-            events: [
-              ...snapshot.events,
-              {
-                id: id('event'),
-                trackerId,
-                occurredAt: at.toISOString(),
-                values: {},
-                note: null,
-                createdAt: timestamp,
-                updatedAt: timestamp,
-              },
-            ],
-          };
+      let nextState: PersistedTrackyState;
+      if (before.complete) {
+        const latest = [...before.events].sort(
+          (left, right) =>
+            new Date(right.occurredAt).getTime() -
+            new Date(left.occurredAt).getTime(),
+        )[0];
+        if (!latest) return null;
+        nextState = {
+          ...snapshot,
+          events: snapshot.events.filter((event) => event.id !== latest.id),
+        };
+      } else {
+        nextState = {
+          ...snapshot,
+          events: [
+            ...snapshot.events,
+            {
+              id: id('event'),
+              trackerId,
+              occurredAt: at.toISOString(),
+              values: {},
+              note: null,
+              createdAt: timestamp,
+              updatedAt: timestamp,
+            },
+          ],
+        };
+      }
 
       stateRef.current = nextState;
       setState(nextState);
-      return completed ? 'uncompleted' : 'completed';
+      const after = trackerGoalStatus(tracker, nextState.events, at);
+      if (before.complete && !after.complete) return 'uncompleted';
+      if (!before.complete && after.complete) return 'completed';
+      return 'logged';
     },
     [],
   );

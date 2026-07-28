@@ -24,9 +24,9 @@ import {
 } from '../src/design/theme';
 import type { TrackedEvent } from '../src/domain/models';
 import {
-  currentStreak,
-  eventsInTimeframe,
+  currentGoalStreak,
   localDateKey,
+  trackerGoalStatus,
 } from '../src/domain/tracking';
 import { useTimeframeNow } from '../src/hooks/useTimeframeNow';
 import { useTracky } from '../src/store/TrackyProvider';
@@ -88,17 +88,17 @@ export default function TrackerDetailSheet() {
     );
   }
 
-  const todayEvents = eventsInTimeframe(trackerEvents, 'today', now);
-  const completedToday = todayEvents.length > 0;
+  const goalStatus = trackerGoalStatus(tracker, trackerEvents, now);
+  const completedGoal = goalStatus.complete;
   const daysWithEntries = new Set(
     trackerEvents.map((event) => localDateKey(new Date(event.occurredAt))),
   );
-  const streak = currentStreak(daysWithEntries, now);
+  const streak = currentGoalStreak(tracker, trackerEvents, now);
 
   const toggleCompletion = () => {
     const result = toggleTrackerCheckIn(tracker.id);
     if (result === 'completed') successHaptic();
-    else if (result === 'uncompleted') tapHaptic();
+    else if (result === 'uncompleted' || result === 'logged') tapHaptic();
   };
 
   return (
@@ -136,10 +136,10 @@ export default function TrackerDetailSheet() {
               styles.heroIcon,
               {
                 backgroundColor: theme.colors.backgroundRaised,
-                borderColor: completedToday
+                borderColor: completedGoal
                   ? resolveHabitColor(tracker.color, theme.dark)
                   : theme.colors.border,
-                borderWidth: completedToday
+                borderWidth: completedGoal
                   ? 5
                   : StyleSheet.hairlineWidth,
               },
@@ -276,12 +276,12 @@ export default function TrackerDetailSheet() {
       <View pointerEvents="box-none" style={styles.footer}>
         <Pressable
           accessibilityLabel={
-            completedToday
-              ? `Mark ${tracker.name} not complete for today`
-              : `Mark ${tracker.name} complete for today`
+            completedGoal
+              ? `Undo the latest ${tracker.name} check-in`
+              : `Check in ${tracker.name}, ${goalStatus.detail}`
           }
           accessibilityRole="button"
-          accessibilityState={{ selected: completedToday }}
+          accessibilityState={{ selected: completedGoal }}
           onPress={toggleCompletion}
           style={({ pressed }) => [
             styles.logButton,
@@ -291,7 +291,7 @@ export default function TrackerDetailSheet() {
             },
           ]}
         >
-          {completedToday ? (
+          {completedGoal ? (
             <Icon
               color={theme.colors.onAccent}
               icon={Tick02Icon}
@@ -307,7 +307,7 @@ export default function TrackerDetailSheet() {
             />
           )}
           <Text style={[typography.label, { color: theme.colors.onAccent }]}>
-            {completedToday ? 'Undo Check In' : 'Check In'}
+            {completedGoal ? 'Undo Check In' : 'Check In'}
           </Text>
         </Pressable>
       </View>
