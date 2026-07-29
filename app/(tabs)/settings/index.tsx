@@ -418,7 +418,7 @@ export default function SettingsScreen() {
           />
           <SettingsRow
             icon={PlayCircleIcon}
-            label="Replay introduction"
+            label="See onboarding again"
             onPress={replayOnboarding}
           />
         </View>
