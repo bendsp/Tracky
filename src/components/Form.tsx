@@ -99,11 +99,12 @@ export function Field({
       style={styles.fullWidth}
     >
       <VStack alignment="leading" spacing={0}>
+        {/* Matches `SectionHeader`: footnote, secondary, sentence case. */}
         <NativeText
           modifiers={[
-            font({ textStyle: 'caption', weight: 'semibold' }),
+            font({ textStyle: 'footnote' }),
             foregroundColor(theme.colors.textSecondary),
-            padding({ bottom: spacing.sm }),
+            padding({ bottom: spacing.xs }),
           ]}
         >
           {label}

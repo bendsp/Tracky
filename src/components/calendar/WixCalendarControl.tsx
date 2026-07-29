@@ -186,7 +186,7 @@ export function WixCalendarControl({
           icon={ArrowLeft01Icon}
           onPress={() => moveWeek(-1)}
         />
-        <Text style={[typography.section, { color: theme.colors.text }]}>
+        <Text style={[typography.title2, { color: theme.colors.text }]}>
           {monthLabel}
         </Text>
         <GlassButton
@@ -238,7 +238,7 @@ export function WixCalendarControl({
 const styles = StyleSheet.create({
   card: {
     borderCurve: 'continuous',
-    borderRadius: radius.lg,
+    borderRadius: radius.md,
     borderWidth: 1,
     overflow: 'hidden',
     paddingBottom: spacing.sm,

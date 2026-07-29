@@ -12,16 +12,14 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '../../../src/components/Icon';
-import { GlassButton } from '../../../src/components/GlassButton';
-import { ScreenHeader } from '../../../src/components/Screen';
 import { TrackerIcon } from '../../../src/components/tracking/TrackerIcon';
 import {
   radius,
   resolveHabitColor,
   spacing,
+  tabBarInset,
   type as typography,
   type Theme,
 } from '../../../src/design/theme';
@@ -42,12 +40,17 @@ function trackerStatus(
 
 export default function TodayScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   useTimeframeNow();
   const trackerEditor = useTrackerEditorSession();
   const { events, theme, toggleTrackerCheckIn, trackers } = useTracky();
 
   const orderedTrackers = useMemo(() => trackers, [trackers]);
+
+  const newTracker = () => {
+    tapHaptic();
+    trackerEditor.begin();
+    router.push('/tracker-editor');
+  };
 
   const openTracker = (tracker: Tracker) => {
     tapHaptic();
@@ -64,110 +67,88 @@ export default function TodayScreen() {
   };
 
   return (
-    <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
-      <Stack.Screen
-        options={{
-          headerShown: false,
-        }}
-      />
+    // The ScrollView has to be the screen's first child or the native large
+    // title will not collapse on scroll.
+    <ScrollView
+      contentInsetAdjustmentBehavior="automatic"
+      contentContainerStyle={[
+        styles.content,
+        { paddingBottom: tabBarInset + spacing.md },
+      ]}
+      showsVerticalScrollIndicator={false}
+      style={{ backgroundColor: theme.colors.background }}
+    >
+      <Stack.Screen options={{ title: 'Today' }} />
+      <Stack.Toolbar placement="right">
+        <Stack.Toolbar.Button
+          accessibilityLabel="Create a new tracker"
+          icon="plus"
+          onPress={newTracker}
+        />
+      </Stack.Toolbar>
 
-      <ScreenHeader
-        title="Tracky"
-        trailing={
-          <GlassButton
-            accessibilityLabel="Create a new tracker"
-            compact
-            icon={Add01Icon}
-            onPress={() => {
-              tapHaptic();
-              trackerEditor.begin();
-              router.push('/tracker-editor');
-            }}
-            prominent
-          />
-        }
-      />
-
-      <ScrollView
-        contentInsetAdjustmentBehavior="never"
-        contentContainerStyle={[
-          styles.content,
-          { paddingBottom: Math.max(insets.bottom, spacing.md) + 80 },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        {orderedTrackers.length ? (
-          <View style={styles.trackerList}>
-            {orderedTrackers.map((tracker) => {
-              const status = trackerStatus(tracker, events, new Date());
-              return (
-                <TrackerRow
-                  key={tracker.id}
-                  onOpen={() => openTracker(tracker)}
-                  onQuickLog={() => toggleCompletion(tracker)}
-                  status={status}
-                  theme={theme}
-                  tracker={tracker}
-                />
-              );
-            })}
-          </View>
-        ) : (
-          <View style={styles.empty}>
-            <View
-              style={[
-                styles.emptyIcon,
-                {
-                  backgroundColor: theme.colors.surface,
-                  borderColor: theme.colors.border,
-                },
-              ]}
-            >
-              <Icon
-                color={theme.colors.textSecondary}
-                icon={Tick02Icon}
-                size={28}
+      {orderedTrackers.length ? (
+        <View style={styles.trackerList}>
+          {orderedTrackers.map((tracker) => {
+            const status = trackerStatus(tracker, events, new Date());
+            return (
+              <TrackerRow
+                key={tracker.id}
+                onOpen={() => openTracker(tracker)}
+                onQuickLog={() => toggleCompletion(tracker)}
+                status={status}
+                theme={theme}
+                tracker={tracker}
               />
-            </View>
-            <Text style={[typography.section, { color: theme.colors.text }]}>
-              Nothing to track yet
-            </Text>
-            <Text
-              style={[
-                typography.body,
-                styles.emptyCopy,
-                { color: theme.colors.textSecondary },
-              ]}
-            >
-              Add a tracker for anything you want to remember or do regularly.
-            </Text>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => {
-                tapHaptic();
-                trackerEditor.begin();
-                router.push('/tracker-editor');
-              }}
-              style={[
-                styles.emptyButton,
-                { backgroundColor: theme.colors.accent },
-              ]}
-            >
-              <Text
-                style={[
-                  typography.label,
-                  { color: theme.colors.onAccent },
-                ]}
-              >
-                New tracker
-              </Text>
-            </Pressable>
+            );
+          })}
+        </View>
+      ) : (
+        <View style={styles.empty}>
+          <View
+            style={[
+              styles.emptyIcon,
+              {
+                backgroundColor: theme.colors.surface,
+                borderColor: theme.colors.border,
+              },
+            ]}
+          >
+            <Icon
+              color={theme.colors.textSecondary}
+              icon={Tick02Icon}
+              size={28}
+            />
           </View>
-        )}
-
-      </ScrollView>
-
-    </View>
+          <Text style={[typography.title3, { color: theme.colors.text }]}>
+            Nothing to track yet
+          </Text>
+          <Text
+            style={[
+              typography.subheadline,
+              styles.emptyCopy,
+              { color: theme.colors.textSecondary },
+            ]}
+          >
+            Add a tracker for anything you want to remember or do regularly.
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            onPress={newTracker}
+            style={[
+              styles.emptyButton,
+              { backgroundColor: theme.colors.accent },
+            ]}
+          >
+            <Text
+              style={[typography.headline, { color: theme.colors.onAccent }]}
+            >
+              New tracker
+            </Text>
+          </Pressable>
+        </View>
+      )}
+    </ScrollView>
   );
 }
 
@@ -208,13 +189,11 @@ function TrackerRow({
           style={[
             styles.trackerIcon,
             {
-              backgroundColor: theme.colors.backgroundRaised,
+              backgroundColor: theme.colors.background,
               borderColor: status.complete
                 ? resolveHabitColor(tracker.color, theme.dark)
                 : theme.colors.border,
-              borderWidth: status.complete
-                ? 3
-                : StyleSheet.hairlineWidth,
+              borderWidth: status.complete ? 3 : StyleSheet.hairlineWidth,
             },
           ]}
         >
@@ -227,19 +206,14 @@ function TrackerRow({
         <View style={styles.rowCopy}>
           <Text
             numberOfLines={1}
-            style={[
-              typography.cardTitle,
-              styles.trackerName,
-              { color: theme.colors.text },
-            ]}
+            style={[typography.headline, { color: theme.colors.text }]}
           >
             {tracker.name}
           </Text>
           <Text
             numberOfLines={1}
             style={[
-              typography.caption,
-              styles.trackerDetail,
+              typography.subheadline,
               { color: theme.colors.textSecondary },
             ]}
           >
@@ -269,7 +243,7 @@ function TrackerRow({
               ? theme.colors.accent
               : pressed
                 ? theme.colors.surfaceMuted
-                : theme.colors.backgroundRaised,
+                : theme.colors.background,
             borderColor: status.complete
               ? theme.colors.accent
               : theme.colors.border,
@@ -277,13 +251,9 @@ function TrackerRow({
         ]}
       >
         <Icon
-          color={
-            status.complete ? theme.colors.onAccent : theme.colors.text
-          }
-          icon={
-            status.complete ? Tick02Icon : Add01Icon
-          }
-          size={status.complete ? 23 : 21}
+          color={status.complete ? theme.colors.onAccent : theme.colors.text}
+          icon={status.complete ? Tick02Icon : Add01Icon}
+          size={22}
           strokeWidth={2}
         />
       </Pressable>
@@ -292,7 +262,6 @@ function TrackerRow({
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1 },
   content: {
     gap: spacing.md,
     paddingHorizontal: spacing.md,
@@ -301,6 +270,7 @@ const styles = StyleSheet.create({
   trackerList: { gap: spacing.sm },
   row: {
     alignItems: 'center',
+    borderCurve: 'continuous',
     borderRadius: radius.md,
     borderWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
@@ -316,6 +286,7 @@ const styles = StyleSheet.create({
     minHeight: 92,
     paddingLeft: spacing.md,
     paddingRight: spacing.sm,
+    paddingVertical: spacing.sm,
   },
   trackerIcon: {
     alignItems: 'center',
@@ -325,14 +296,6 @@ const styles = StyleSheet.create({
     width: 56,
   },
   rowCopy: { flex: 1, gap: spacing.xxs },
-  trackerName: {
-    fontSize: 18,
-    lineHeight: 23,
-  },
-  trackerDetail: {
-    fontSize: 14,
-    lineHeight: 19,
-  },
   quickAction: {
     alignItems: 'center',
     borderRadius: radius.pill,

@@ -10,12 +10,14 @@ import {
   Text,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '../src/components/Icon';
 import {
   NativeSheetScreen,
   NativeSheetScrollView,
 } from '../src/components/NativeSheetScreen';
+import { SectionHeader } from '../src/components/Screen';
 import { TrackerIcon } from '../src/components/tracking/TrackerIcon';
 import {
   radius,
@@ -26,6 +28,8 @@ import {
 import type { TrackedEvent } from '../src/domain/models';
 import {
   currentGoalStreak,
+  goalStreakDescription,
+  goalStreakLabels,
   localDateKey,
   trackerGoalStatus,
 } from '../src/domain/tracking';
@@ -34,14 +38,15 @@ import { useTrackerEditorSession } from '../src/store/TrackerEditorSession';
 import { useTracky } from '../src/store/TrackyProvider';
 import { successHaptic, tapHaptic } from '../src/utils/haptics';
 
-const weekdays = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+/** Width of the completion ring, in the tracker's colour. */
+const COMPLETION_RING = 3;
 
-function sameLocalDay(iso: string, date: Date) {
-  return localDateKey(new Date(iso)) === localDateKey(date);
-}
-
-function dayCount(events: TrackedEvent[], date: Date) {
-  return events.filter((event) => sameLocalDay(event.occurredAt, date)).length;
+function eventDay(iso: string) {
+  return new Intl.DateTimeFormat(undefined, {
+    day: 'numeric',
+    month: 'long',
+    weekday: 'long',
+  }).format(new Date(iso));
 }
 
 function eventTime(iso: string) {
@@ -51,9 +56,21 @@ function eventTime(iso: string) {
   }).format(new Date(iso));
 }
 
+/**
+ * Narrow weekday initials in the user's locale, starting Monday to match
+ * `startOfGoalPeriod`. 1 January 2024 was a Monday.
+ */
+function weekdayInitials() {
+  const formatter = new Intl.DateTimeFormat(undefined, { weekday: 'narrow' });
+  return Array.from({ length: 7 }, (_, index) =>
+    formatter.format(new Date(2024, 0, 1 + index)),
+  );
+}
+
 export default function TrackerDetailSheet() {
   const { trackerId } = useLocalSearchParams<{ trackerId?: string }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   useTimeframeNow();
   const trackerEditor = useTrackerEditorSession();
   const now = new Date();
@@ -83,7 +100,7 @@ export default function TrackerDetailSheet() {
             separateBackground
           />
         </Stack.Toolbar>
-        <Text style={[typography.section, { color: theme.colors.text }]}>
+        <Text style={[typography.title3, { color: theme.colors.text }]}>
           Tracker not found
         </Text>
       </NativeSheetScreen>
@@ -96,6 +113,7 @@ export default function TrackerDetailSheet() {
     trackerEvents.map((event) => localDateKey(new Date(event.occurredAt))),
   );
   const streak = currentGoalStreak(tracker, trackerEvents, now);
+  const footerInset = Math.max(insets.bottom, spacing.md);
 
   const toggleCompletion = () => {
     const result = toggleTrackerCheckIn(tracker.id);
@@ -128,19 +146,22 @@ export default function TrackerDetailSheet() {
       </Stack.Toolbar>
 
       <NativeSheetScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: footerInset + 52 + spacing.xl },
+        ]}
       >
         <View style={styles.hero}>
           <View
             style={[
               styles.heroIcon,
               {
-                backgroundColor: theme.colors.backgroundRaised,
+                backgroundColor: theme.colors.background,
                 borderColor: completedGoal
                   ? resolveHabitColor(tracker.color, theme.dark)
                   : theme.colors.border,
                 borderWidth: completedGoal
-                  ? 5
+                  ? COMPLETION_RING
                   : StyleSheet.hairlineWidth,
               },
             ]}
@@ -151,27 +172,35 @@ export default function TrackerDetailSheet() {
               size={44}
             />
           </View>
-          <Text style={[typography.section, { color: theme.colors.text }]}>
+          <Text style={[typography.title2, { color: theme.colors.text }]}>
             {tracker.name}
           </Text>
         </View>
 
         <View
-          accessibilityLabel={`${streak} day streak, ${trackerEvents.length} check-ins`}
+          accessibilityLabel={`${goalStreakDescription(
+            tracker.goal.period,
+            streak,
+          )}, ${trackerEvents.length} check-ins`}
           style={[
             styles.statsCard,
             {
-              backgroundColor: theme.colors.surface,
+              backgroundColor: theme.colors.groupedSurface,
               borderColor: theme.colors.border,
             },
           ]}
         >
           <View style={styles.stat}>
-            <Text style={[styles.statValue, { color: theme.colors.text }]}>
+            <Text style={[typography.title, { color: theme.colors.text }]}>
               {streak}
             </Text>
-            <Text style={[typography.label, { color: theme.colors.textSecondary }]}>
-              Streak
+            <Text
+              style={[
+                typography.footnote,
+                { color: theme.colors.textSecondary },
+              ]}
+            >
+              {goalStreakLabels[tracker.goal.period]}
             </Text>
           </View>
           <View
@@ -181,11 +210,16 @@ export default function TrackerDetailSheet() {
             ]}
           />
           <View style={styles.stat}>
-            <Text style={[styles.statValue, { color: theme.colors.text }]}>
+            <Text style={[typography.title, { color: theme.colors.text }]}>
               {trackerEvents.length}
             </Text>
-            <Text style={[typography.label, { color: theme.colors.textSecondary }]}>
-              Check Ins
+            <Text
+              style={[
+                typography.footnote,
+                { color: theme.colors.textSecondary },
+              ]}
+            >
+              Check-ins
             </Text>
           </View>
         </View>
@@ -196,22 +230,14 @@ export default function TrackerDetailSheet() {
           theme={theme}
         />
 
-        <View style={styles.section}>
-          <Text
-            style={[
-              typography.label,
-              styles.sectionTitle,
-              { color: theme.colors.textSecondary },
-            ]}
-          >
-            ENTRIES
-          </Text>
+        <View>
+          <SectionHeader>Entries</SectionHeader>
           {trackerEvents.length ? (
             <View
               style={[
                 styles.entries,
                 {
-                  backgroundColor: theme.colors.surface,
+                  backgroundColor: theme.colors.groupedSurface,
                   borderColor: theme.colors.border,
                 },
               ]}
@@ -230,22 +256,20 @@ export default function TrackerDetailSheet() {
                   <View style={styles.entryCopy}>
                     <Text
                       numberOfLines={1}
-                      style={[typography.cardTitle, { color: theme.colors.text }]}
+                      style={[
+                        typography.headline,
+                        { color: theme.colors.text },
+                      ]}
                     >
-                      Checked in
+                      {eventDay(event.occurredAt)}
                     </Text>
                     <Text
                       numberOfLines={1}
                       style={[
-                        typography.caption,
+                        typography.subheadline,
                         { color: theme.colors.textSecondary },
                       ]}
                     >
-                      {new Intl.DateTimeFormat(undefined, {
-                        day: 'numeric',
-                        month: 'short',
-                      }).format(new Date(event.occurredAt))}
-                      {' · '}
                       {eventTime(event.occurredAt)}
                       {event.note ? ` · ${event.note}` : ''}
                     </Text>
@@ -258,13 +282,16 @@ export default function TrackerDetailSheet() {
               style={[
                 styles.emptyEntries,
                 {
-                  backgroundColor: theme.colors.surface,
+                  backgroundColor: theme.colors.groupedSurface,
                   borderColor: theme.colors.border,
                 },
               ]}
             >
               <Text
-                style={[typography.body, { color: theme.colors.textSecondary }]}
+                style={[
+                  typography.subheadline,
+                  { color: theme.colors.textSecondary },
+                ]}
               >
                 No entries yet.
               </Text>
@@ -273,7 +300,10 @@ export default function TrackerDetailSheet() {
         </View>
       </NativeSheetScrollView>
 
-      <View pointerEvents="box-none" style={styles.footer}>
+      <View
+        pointerEvents="box-none"
+        style={[styles.footer, { paddingBottom: footerInset }]}
+      >
         <Pressable
           accessibilityLabel={
             completedGoal
@@ -291,27 +321,17 @@ export default function TrackerDetailSheet() {
             },
           ]}
         >
-          {completedGoal ? (
-            <Icon
-              color={theme.colors.onAccent}
-              icon={Tick02Icon}
-              size={18}
-              strokeWidth={2}
-            />
-          ) : (
-            <Icon
-              color={theme.colors.onAccent}
-              icon={Add01Icon}
-              size={20}
-              strokeWidth={2}
-            />
-          )}
-          <Text style={[typography.label, { color: theme.colors.onAccent }]}>
-            {completedGoal ? 'Undo Check In' : 'Check In'}
+          <Icon
+            color={theme.colors.onAccent}
+            icon={completedGoal ? Tick02Icon : Add01Icon}
+            size={20}
+            strokeWidth={2}
+          />
+          <Text style={[typography.headline, { color: theme.colors.onAccent }]}>
+            {completedGoal ? 'Undo check-in' : 'Check in'}
           </Text>
         </Pressable>
       </View>
-
     </NativeSheetScreen>
   );
 }
@@ -329,38 +349,32 @@ function MonthHistory({
   const monthIndex = month.getMonth();
   const firstDay = new Date(year, monthIndex, 1);
   const lastDate = new Date(year, monthIndex + 1, 0).getDate();
+  // Monday-first, matching how goal periods are bucketed.
+  const leadingBlanks = (firstDay.getDay() + 6) % 7;
   const cells = [
-    ...Array.from({ length: firstDay.getDay() }, () => null),
+    ...Array.from({ length: leadingBlanks }, () => null),
     ...Array.from({ length: lastDate }, (_, index) => index + 1),
   ];
   while (cells.length % 7) cells.push(null);
 
   return (
-    <View style={styles.section}>
-      <Text
-        style={[
-          typography.label,
-          styles.sectionTitle,
-          { color: theme.colors.textSecondary },
-        ]}
-      >
+    <View>
+      <SectionHeader>
         {new Intl.DateTimeFormat(undefined, {
           month: 'long',
           year: 'numeric',
-        })
-          .format(month)
-          .toLocaleUpperCase()}
-      </Text>
+        }).format(month)}
+      </SectionHeader>
       <View
         style={[
           styles.calendar,
           {
-            backgroundColor: theme.colors.surface,
+            backgroundColor: theme.colors.groupedSurface,
             borderColor: theme.colors.border,
           },
         ]}
       >
-        {weekdays.map((weekday, index) => (
+        {weekdayInitials().map((weekday, index) => (
           <Text
             key={`${weekday}-${index}`}
             style={[
@@ -409,14 +423,13 @@ function MonthHistory({
 
 const styles = StyleSheet.create({
   content: {
-    gap: spacing.xl,
+    gap: spacing.xs,
     padding: spacing.md,
-    paddingBottom: 128,
   },
   hero: {
     alignItems: 'center',
     gap: spacing.md,
-    paddingBottom: spacing.sm,
+    paddingBottom: spacing.lg,
     paddingTop: spacing.lg,
   },
   heroIcon: {
@@ -428,6 +441,7 @@ const styles = StyleSheet.create({
   },
   statsCard: {
     alignItems: 'center',
+    borderCurve: 'continuous',
     borderRadius: radius.md,
     borderWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
@@ -444,19 +458,8 @@ const styles = StyleSheet.create({
     height: 44,
     width: StyleSheet.hairlineWidth,
   },
-  statValue: {
-    fontSize: 28,
-    fontWeight: '600',
-    letterSpacing: -0.4,
-  },
-  section: { gap: spacing.xs },
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: '500',
-    letterSpacing: -0.15,
-    paddingHorizontal: spacing.xs,
-  },
   calendar: {
+    borderCurve: 'continuous',
     borderRadius: radius.md,
     borderWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
@@ -476,9 +479,11 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     height: 30,
     justifyContent: 'center',
-    width: 30,
+    minWidth: 30,
+    paddingHorizontal: spacing.xxs,
   },
   entries: {
+    borderCurve: 'continuous',
     borderRadius: radius.md,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
@@ -489,18 +494,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.sm,
     minHeight: 68,
+    paddingVertical: spacing.sm,
   },
   entryCopy: { flex: 1, gap: spacing.xxs },
   emptyEntries: {
     alignItems: 'center',
+    borderCurve: 'continuous',
     borderRadius: radius.md,
     borderWidth: StyleSheet.hairlineWidth,
     padding: spacing.xl,
   },
   footer: {
-    bottom: spacing.md,
+    bottom: 0,
     left: 0,
-    paddingBottom: spacing.md,
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
     position: 'absolute',

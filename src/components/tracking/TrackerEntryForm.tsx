@@ -137,7 +137,7 @@ export function TrackerEntryForm({
         <View key={field.id} style={styles.fieldGroup}>
           {field.type === 'choice' ? (
             <>
-              <Text style={[typography.label, { color: theme.colors.textSecondary }]}>
+              <Text style={[typography.footnote, { color: theme.colors.textSecondary }]}>
                 {field.name}
               </Text>
               <View style={styles.chips}>
@@ -209,7 +209,7 @@ export function TrackerEntryForm({
                 value={values[field.id] ?? ''}
               />
               {errors[field.id] ? (
-                <Text style={[typography.caption, { color: theme.colors.danger }]}>
+                <Text style={[typography.footnote, { color: theme.colors.danger }]}>
                   {errors[field.id]}
                 </Text>
               ) : null}
@@ -217,7 +217,7 @@ export function TrackerEntryForm({
           ) : null}
           {field.type === 'date' ? (
             <View style={styles.nativePickerRow}>
-              <Text style={[typography.label, { color: theme.colors.textSecondary }]}>
+              <Text style={[typography.footnote, { color: theme.colors.textSecondary }]}>
                 {field.name}
               </Text>
               <NativeDatePicker
@@ -247,7 +247,7 @@ export function TrackerEntryForm({
           },
         ]}
       >
-        <Text style={[typography.cardTitle, { color: theme.colors.text }]}>
+        <Text style={[typography.headline, { color: theme.colors.text }]}>
           Occurred
         </Text>
         <NativeDatePicker
@@ -280,7 +280,7 @@ export function TrackerEntryForm({
           style={[styles.delete, { backgroundColor: theme.colors.dangerSoft }]}
         >
           <Icon color={theme.colors.danger} icon={Delete02Icon} size={19} />
-          <Text style={[typography.label, { color: theme.colors.danger }]}>
+          <Text style={[typography.footnote, { color: theme.colors.danger }]}>
             Delete entry
           </Text>
         </Pressable>
@@ -297,12 +297,14 @@ const styles = StyleSheet.create({
   inlineField: { flex: 1 },
   inlineButton: {
     alignItems: 'center',
+    borderCurve: 'continuous',
     borderRadius: radius.md,
     height: 52,
     justifyContent: 'center',
     width: 52,
   },
   occurrence: {
+    borderCurve: 'continuous',
     borderRadius: radius.md,
     borderWidth: 1,
     gap: spacing.sm,
@@ -311,6 +313,7 @@ const styles = StyleSheet.create({
   nativePickerRow: { gap: spacing.xs },
   delete: {
     alignItems: 'center',
+    borderCurve: 'continuous',
     borderRadius: radius.md,
     flexDirection: 'row',
     gap: spacing.xs,

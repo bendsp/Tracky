@@ -3,8 +3,13 @@ import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-import { spacing, type as typography } from '../src/design/theme';
-import { nativeSheetOptions } from '../src/navigation/nativeSheetOptions';
+import {
+  radius,
+  spacing,
+  tabBarInset,
+  type as typography,
+} from '../src/design/theme';
+import { nativeSheetOptions } from '../src/navigation/screenOptions';
 import { TrackerEditorSessionProvider } from '../src/store/TrackerEditorSession';
 import { useTracky, TrackyProvider } from '../src/store/TrackyProvider';
 import { RevenueCatProvider } from '../src/subscriptions/RevenueCatProvider';
@@ -31,7 +36,7 @@ function RootNavigator() {
     return (
       <View style={[styles.loadError, { backgroundColor: theme.colors.background }]}>
         <StatusBar style={theme.dark ? 'light' : 'dark'} />
-        <Text style={[typography.section, { color: theme.colors.text }]}>
+        <Text style={[typography.title2, { color: theme.colors.text }]}>
           Local data couldn’t be opened
         </Text>
         <Text
@@ -51,7 +56,7 @@ function RootNavigator() {
             { backgroundColor: theme.colors.accent },
           ]}
         >
-          <Text style={[typography.label, { color: theme.colors.onAccent }]}>
+          <Text style={[typography.headline, { color: theme.colors.onAccent }]}>
             Try again
           </Text>
         </Pressable>
@@ -105,7 +110,7 @@ function RootNavigator() {
             },
           ]}
         >
-          <Text style={[typography.label, { color: theme.colors.danger }]}>
+          <Text style={[typography.footnote, { color: theme.colors.danger }]}>
             Local save failed · Tap to retry
           </Text>
         </Pressable>
@@ -147,7 +152,8 @@ const styles = StyleSheet.create({
   retryButton: {
     alignItems: 'center',
     alignSelf: 'flex-start',
-    borderRadius: 16,
+    borderCurve: 'continuous',
+    borderRadius: radius.md,
     justifyContent: 'center',
     marginTop: spacing.xl,
     minHeight: 48,
@@ -155,9 +161,9 @@ const styles = StyleSheet.create({
   },
   saveError: {
     alignSelf: 'center',
-    borderRadius: 999,
+    borderRadius: radius.pill,
     borderWidth: 1,
-    bottom: 104,
+    bottom: tabBarInset + spacing.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     position: 'absolute',

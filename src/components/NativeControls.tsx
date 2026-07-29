@@ -18,6 +18,7 @@ import {
 } from '@expo/ui/swift-ui/modifiers';
 import { StyleSheet } from 'react-native';
 
+import { radius } from '../design/theme';
 import { useTracky } from '../store/TrackyProvider';
 
 export function NativeSegmentedPicker<T extends string>({
@@ -220,7 +221,7 @@ const styles = StyleSheet.create({
     width: 154,
   },
   compactMenu: {
-    borderRadius: 999,
+    borderRadius: radius.pill,
     borderWidth: StyleSheet.hairlineWidth,
     height: 36,
     minWidth: 96,

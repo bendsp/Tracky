@@ -1,19 +1,16 @@
 import {
   Pressable,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 
-import {
-  radius,
-  spacing,
-  type as typography,
-} from '../../design/theme';
+import { radius, spacing } from '../../design/theme';
 import type { TrackerIconName } from '../../domain/models';
 import { useTracky } from '../../store/TrackyProvider';
 import { selectionHaptic } from '../../utils/haptics';
 import { NativeSheetScrollView } from '../NativeSheetScreen';
+import { SectionHeader } from '../Screen';
+import { selectionTile } from './selectionTile';
 import {
   TrackerIcon,
   trackerIconOptions,
@@ -55,23 +52,17 @@ export function TrackerIconPicker({
       contentContainerStyle={styles.content}
     >
         {iconGroups.map((group) => (
-          <View
-            key={group.title}
-            style={[
-              styles.group,
-              {
-                backgroundColor: theme.colors.surface,
-                borderColor: theme.colors.border,
-              },
-            ]}
-          >
-            <Text
-              accessibilityRole="header"
-              style={[typography.groupTitle, { color: theme.colors.text }]}
+          <View key={group.title}>
+            <SectionHeader>{group.title}</SectionHeader>
+            <View
+              style={[
+                styles.group,
+                {
+                  backgroundColor: theme.colors.groupedSurface,
+                  borderColor: theme.colors.border,
+                },
+              ]}
             >
-              {group.title}
-            </Text>
-            <View style={styles.grid}>
               {group.icons.map((icon) => {
                 const isSelected = selected === icon;
                 return (
@@ -85,11 +76,11 @@ export function TrackerIconPicker({
                       onSelect(icon);
                     }}
                     style={({ pressed }) => [
-                      styles.iconChoice,
+                      selectionTile.tile,
                       {
                         backgroundColor: theme.colors.background,
                         borderColor: isSelected
-                          ? theme.colors.textSecondary
+                          ? theme.colors.text
                           : 'transparent',
                         opacity: pressed ? 0.62 : 1,
                       },
@@ -112,26 +103,16 @@ export function TrackerIconPicker({
 
 const styles = StyleSheet.create({
   content: {
-    gap: spacing.lg,
+    gap: spacing.xs,
   },
   group: {
     alignSelf: 'stretch',
-    borderRadius: radius.lg,
+    borderCurve: 'continuous',
+    borderRadius: radius.md,
     borderWidth: StyleSheet.hairlineWidth,
-    gap: spacing.lg,
-    padding: spacing.lg,
-  },
-  grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.md,
-  },
-  iconChoice: {
-    alignItems: 'center',
-    borderRadius: radius.pill,
-    borderWidth: 3,
-    height: 60,
-    justifyContent: 'center',
-    width: 60,
+    gap: spacing.sm,
+    padding: spacing.md,
   },
 });

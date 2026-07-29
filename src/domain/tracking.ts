@@ -25,6 +25,24 @@ export const goalPeriodStatusLabels: Record<TrackerGoalPeriod, string> = {
   month: 'this month',
 };
 
+/**
+ * A streak counts consecutive goal *periods*, not days — three weeks on a
+ * weekly tracker is a streak of 3. These labels keep the UI honest about which.
+ */
+export const goalStreakLabels: Record<TrackerGoalPeriod, string> = {
+  day: 'Day streak',
+  week: 'Week streak',
+  month: 'Month streak',
+};
+
+export function goalStreakDescription(
+  period: TrackerGoalPeriod,
+  streak: number,
+) {
+  const unit = streak === 1 ? period : `${period}s`;
+  return `${streak} ${unit} streak`;
+}
+
 function localDate(value: string) {
   return new Date(`${value}T00:00:00`);
 }

@@ -87,7 +87,7 @@ export function Sheet({
                 styles.sheet,
                 size === 'large' && styles.largeSheet,
                 {
-                  backgroundColor: theme.colors.sheetBackground,
+                  backgroundColor: theme.colors.groupedBackground,
                   width,
                 },
               ]}
@@ -105,6 +105,7 @@ export function Sheet({
                     accessibilityRole="header"
                     pointerEvents="none"
                     style={[
+                      typography.headline,
                       styles.centeredTitle,
                       { color: theme.colors.text },
                     ]}
@@ -126,7 +127,7 @@ export function Sheet({
                   <Text
                     accessibilityRole="header"
                     style={[
-                      typography.section,
+                      typography.title2,
                       styles.headingCopy,
                       { color: theme.colors.text },
                     ]}
@@ -171,10 +172,7 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
   centeredTitle: {
-    fontSize: 17,
-    fontWeight: '600',
     left: 0,
-    letterSpacing: -0.15,
     position: 'absolute',
     right: 0,
     textAlign: 'center',

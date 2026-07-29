@@ -1,48 +1,33 @@
-import type { PropsWithChildren, ReactNode } from 'react';
+import type { PropsWithChildren } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { spacing, type as typography } from '../design/theme';
 import { useTracky } from '../store/TrackyProvider';
 
-export function ScreenHeader({
-  title,
-  trailing,
-}: {
-  title: string;
-  trailing?: ReactNode;
-}) {
-  const { theme } = useTracky();
-  const insets = useSafeAreaInsets();
-
-  return (
-    <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
-      <Text
-        accessibilityRole="header"
-        style={[typography.title, { color: theme.colors.text }]}
-      >
-        {title}
-      </Text>
-      {trailing}
-    </View>
-  );
-}
-
-export function SectionTitle({
+/**
+ * The only section header in Tracky. Sits above a grouped card and never
+ * inside one. Adds no horizontal padding of its own so it aligns to the leading
+ * edge of the cards it labels — put it in the same container as them. Sentence
+ * case, matching SwiftUI `Form` and modern Settings.app; uppercase headers are
+ * the iOS 12 look.
+ */
+export function SectionHeader({
   children,
   meta,
 }: PropsWithChildren<{ meta?: string }>) {
   const { theme } = useTracky();
   return (
-    <View style={styles.section}>
+    <View style={styles.header}>
       <Text
         accessibilityRole="header"
-        style={[typography.groupTitle, { color: theme.colors.text }]}
+        style={[typography.footnote, { color: theme.colors.textSecondary }]}
       >
         {children}
       </Text>
       {meta ? (
-        <Text style={[typography.caption, { color: theme.colors.textSecondary }]}>
+        <Text
+          style={[typography.footnote, { color: theme.colors.textTertiary }]}
+        >
           {meta}
         </Text>
       ) : null}
@@ -52,17 +37,11 @@ export function SectionTitle({
 
 const styles = StyleSheet.create({
   header: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingBottom: spacing.lg,
-    paddingHorizontal: spacing.md,
-  },
-  section: {
     alignItems: 'baseline',
     flexDirection: 'row',
+    gap: spacing.xs,
     justifyContent: 'space-between',
-    paddingBottom: spacing.md,
+    paddingBottom: spacing.xs,
     paddingTop: spacing.xl,
   },
 });

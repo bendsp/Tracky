@@ -23,7 +23,7 @@ export function NativeSheetScreen({
       collapsable={false}
       style={[
         styles.screen,
-        { backgroundColor: theme.colors.sheetBackground },
+        { backgroundColor: theme.colors.groupedBackground },
         style,
       ]}
     >

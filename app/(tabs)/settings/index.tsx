@@ -11,7 +11,7 @@ import Constants from 'expo-constants';
 import * as DocumentPicker from 'expo-document-picker';
 import { Directory, File, Paths } from 'expo-file-system';
 import * as Linking from 'expo-linking';
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import { useEffect } from 'react';
 import {
@@ -23,28 +23,29 @@ import {
   View,
 } from 'react-native';
 
-import { Icon } from '../../src/components/Icon';
-import { NativeSegmentedPicker } from '../../src/components/NativeControls';
-import { ScreenHeader, SectionTitle } from '../../src/components/Screen';
+import { Icon } from '../../../src/components/Icon';
+import { NativeSegmentedPicker } from '../../../src/components/NativeControls';
+import { SectionHeader } from '../../../src/components/Screen';
 import {
   radius,
   spacing,
+  tabBarInset,
   type as typography,
   type AppearanceMode,
-} from '../../src/design/theme';
-import type { TrackyBackupPreview } from '../../src/domain/models';
+} from '../../../src/design/theme';
+import type { TrackyBackupPreview } from '../../../src/domain/models';
 import {
   createTrackyBackupPreview,
   parseAndMigrateTrackyData,
   TrackyDataError,
   TrackyRollbackError,
-} from '../../src/storage/trackyData';
-import { useTracky } from '../../src/store/TrackyProvider';
-import { useRevenueCat } from '../../src/subscriptions/RevenueCatProvider';
+} from '../../../src/storage/trackyData';
+import { useTracky } from '../../../src/store/TrackyProvider';
+import { useRevenueCat } from '../../../src/subscriptions/RevenueCatProvider';
 import {
   getPurchaseErrorMessage,
   hasTrackyPlus,
-} from '../../src/subscriptions/subscriptionState';
+} from '../../../src/subscriptions/subscriptionState';
 
 const APPEARANCE: {
   value: AppearanceMode;
@@ -275,146 +276,165 @@ export default function SettingsScreen() {
   };
 
   return (
-    <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        <ScreenHeader title="Settings" />
-        <View style={styles.inner}>
-          <SectionTitle>Appearance</SectionTitle>
-          <NativeSegmentedPicker
-            accessibilityLabel="Appearance"
-            onSelectionChange={setAppearance}
-            options={APPEARANCE}
-            selection={appearance}
+    // The ScrollView has to be the screen's first child or the native large
+    // title will not collapse on scroll.
+    <ScrollView
+      contentInsetAdjustmentBehavior="automatic"
+      contentContainerStyle={[
+        styles.content,
+        { paddingBottom: tabBarInset + spacing.md },
+      ]}
+      showsVerticalScrollIndicator={false}
+      style={{ backgroundColor: theme.colors.groupedBackground }}
+    >
+      <Stack.Screen options={{ title: 'Settings' }} />
+      <View style={styles.inner}>
+        <SectionHeader>Appearance</SectionHeader>
+        <NativeSegmentedPicker
+          accessibilityLabel="Appearance"
+          onSelectionChange={setAppearance}
+          options={APPEARANCE}
+          selection={appearance}
+        />
+
+        <SectionHeader>Tracky Plus</SectionHeader>
+        <View
+          style={[
+            styles.group,
+            {
+              backgroundColor: theme.colors.groupedSurface,
+              borderColor: theme.colors.border,
+            },
+          ]}
+        >
+          <SettingsRow
+            icon={CrownIcon}
+            label="Tracky Plus"
+            onPress={isPlus ? manageSubscription : showPlans}
+            value={
+              purchasesLoading
+                ? 'Checking…'
+                : isPlus
+                  ? 'Active'
+                  : purchasesConfigured
+                    ? 'Free'
+                    : 'Unavailable'
+            }
           />
-
-          <SectionTitle>Tracky Plus</SectionTitle>
           <View
-            style={[
-              styles.group,
-              { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
-            ]}
-          >
-            <SettingsRow
-              icon={CrownIcon}
-              label="Tracky Plus"
-              onPress={isPlus ? manageSubscription : showPlans}
-              value={
-                purchasesLoading
-                  ? 'Checking…'
-                  : isPlus
-                    ? 'Active'
-                    : purchasesConfigured
-                      ? 'Free'
-                      : 'Unavailable'
-              }
-            />
-            <View
-              style={[styles.separator, { backgroundColor: theme.colors.separator }]}
-            />
-            <SettingsRow
-              icon={WalletDone01Icon}
-              label={isPlus ? 'Manage subscription' : 'View plans'}
-              onPress={isPlus ? manageSubscription : showPlans}
-            />
-            <View
-              style={[styles.separator, { backgroundColor: theme.colors.separator }]}
-            />
-            <SettingsRow
-              icon={RefreshIcon}
-              label="Restore purchases"
-              onPress={restoreTrackyPlus}
-            />
-          </View>
-          {configurationError ? (
-            <Text
-              style={[
-                typography.caption,
-                styles.sectionNote,
-                { color: theme.colors.textSecondary },
-              ]}
-            >
-              {configurationError}
-            </Text>
-          ) : null}
-
-          <SectionTitle>Data</SectionTitle>
+            style={[styles.separator, { backgroundColor: theme.colors.separator }]}
+          />
+          <SettingsRow
+            icon={WalletDone01Icon}
+            label={isPlus ? 'Manage subscription' : 'View plans'}
+            onPress={isPlus ? manageSubscription : showPlans}
+          />
           <View
-            style={[
-              styles.group,
-              { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
-            ]}
-          >
-            <SettingsRow
-              icon={DatabaseExportIcon}
-              label="Export all data"
-              onPress={exportData}
-            />
-            <View
-              style={[styles.separator, { backgroundColor: theme.colors.separator }]}
-            />
-            <SettingsRow
-              icon={FileImportIcon}
-              label="Import data"
-              onPress={importData}
-            />
-            <View
-              style={[styles.separator, { backgroundColor: theme.colors.separator }]}
-            />
-            <SettingsRow
-              danger
-              icon={Delete02Icon}
-              label="Delete all data"
-              onPress={confirmDeleteAll}
-            />
-          </View>
-
-          <SectionTitle>About</SectionTitle>
-          <View
-            style={[
-              styles.group,
-              { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
-            ]}
-          >
-            <View style={styles.row}>
-              <Text style={[typography.body, styles.rowLabel, { color: theme.colors.text }]}>
-                Version
-              </Text>
-              <Text style={[typography.body, { color: theme.colors.textSecondary }]}>
-                {APP_VERSION}
-              </Text>
-            </View>
-            <View
-              style={[styles.separator, { backgroundColor: theme.colors.separator }]}
-            />
-            <SettingsRow
-              icon={ShieldUserIcon}
-              label="Privacy policy"
-              onPress={() => router.push('/privacy')}
-            />
-          </View>
-          <Pressable
-            accessibilityHint="Opens desprets.net in your browser"
-            accessibilityRole="link"
-            onPress={() => {
-              Linking.openURL(CREATOR_URL).catch(() => {
-                Alert.alert('Cannot open website', 'Please visit desprets.net in your browser.');
-              });
-            }}
-            style={({ pressed }) => [
-              styles.creatorLink,
-              { opacity: pressed ? 0.55 : 1 },
-            ]}
-          >
-            <Text style={[typography.caption, { color: theme.colors.textSecondary }]}>
-              Made with love by Ben Desprets
-            </Text>
-          </Pressable>
+            style={[styles.separator, { backgroundColor: theme.colors.separator }]}
+          />
+          <SettingsRow
+            icon={RefreshIcon}
+            label="Restore purchases"
+            onPress={restoreTrackyPlus}
+          />
         </View>
-      </ScrollView>
-    </View>
+        {configurationError ? (
+          <Text
+            style={[
+              typography.footnote,
+              styles.sectionNote,
+              { color: theme.colors.textSecondary },
+            ]}
+          >
+            {configurationError}
+          </Text>
+        ) : null}
+
+        <SectionHeader>Data</SectionHeader>
+        <View
+          style={[
+            styles.group,
+            {
+              backgroundColor: theme.colors.groupedSurface,
+              borderColor: theme.colors.border,
+            },
+          ]}
+        >
+          <SettingsRow
+            icon={DatabaseExportIcon}
+            label="Export all data"
+            onPress={exportData}
+          />
+          <View
+            style={[styles.separator, { backgroundColor: theme.colors.separator }]}
+          />
+          <SettingsRow
+            icon={FileImportIcon}
+            label="Import data"
+            onPress={importData}
+          />
+          <View
+            style={[styles.separator, { backgroundColor: theme.colors.separator }]}
+          />
+          <SettingsRow
+            danger
+            icon={Delete02Icon}
+            label="Delete all data"
+            onPress={confirmDeleteAll}
+          />
+        </View>
+
+        <SectionHeader>About</SectionHeader>
+        <View
+          style={[
+            styles.group,
+            {
+              backgroundColor: theme.colors.groupedSurface,
+              borderColor: theme.colors.border,
+            },
+          ]}
+        >
+          <View style={styles.row}>
+            <Text style={[typography.body, styles.rowLabel, { color: theme.colors.text }]}>
+              Version
+            </Text>
+            <Text style={[typography.body, { color: theme.colors.textSecondary }]}>
+              {APP_VERSION}
+            </Text>
+          </View>
+          <View
+            style={[styles.separator, { backgroundColor: theme.colors.separator }]}
+          />
+          <SettingsRow
+            icon={ShieldUserIcon}
+            label="Privacy policy"
+            onPress={() => router.push('/privacy')}
+          />
+        </View>
+        <Pressable
+          accessibilityHint="Opens desprets.net in your browser"
+          accessibilityRole="link"
+          onPress={() => {
+            Linking.openURL(CREATOR_URL).catch(() => {
+              Alert.alert('Cannot open website', 'Please visit desprets.net in your browser.');
+            });
+          }}
+          style={({ pressed }) => [
+            styles.creatorLink,
+            { opacity: pressed ? 0.55 : 1 },
+          ]}
+        >
+          <Text
+            style={[
+              typography.footnote,
+              { color: theme.colors.textSecondary },
+            ]}
+          >
+            Made with love by Ben Desprets
+          </Text>
+        </Pressable>
+      </View>
+    </ScrollView>
   );
 }
 
@@ -500,10 +520,10 @@ function SettingsRow({
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1 },
-  content: { paddingBottom: 150 },
+  content: { flexGrow: 1 },
   inner: { paddingHorizontal: spacing.md },
   group: {
+    borderCurve: 'continuous',
     borderRadius: radius.md,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
@@ -514,15 +534,18 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     minHeight: 52,
     paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
   },
   rowIcon: {
     alignItems: 'center',
-    borderRadius: 8,
+    borderCurve: 'continuous',
+    borderRadius: radius.sm,
     height: 30,
     justifyContent: 'center',
     width: 30,
   },
   rowLabel: { flex: 1 },
+  // Aligns the divider to the row label: 16 inset + 30 icon + 12 gap.
   separator: { height: StyleSheet.hairlineWidth, marginLeft: 58 },
   sectionNote: {
     marginTop: spacing.sm,

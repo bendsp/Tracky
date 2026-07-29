@@ -34,6 +34,8 @@ import { NativeSheetScrollView } from '../NativeSheetScreen';
 import {
   NativeMenuPicker,
 } from '../NativeControls';
+import { SectionHeader } from '../Screen';
+import { selectionTile } from './selectionTile';
 import { TrackerIcon } from './TrackerIcon';
 
 export function TrackerEditorForm({
@@ -65,7 +67,7 @@ export function TrackerEditorForm({
             style={({ pressed }) => [
               styles.iconPreview,
               {
-                backgroundColor: theme.colors.surfaceMuted,
+                backgroundColor: theme.colors.groupedSurface,
                 borderColor: theme.colors.border,
                 opacity: pressed ? 0.72 : 1,
               },
@@ -98,11 +100,9 @@ export function TrackerEditorForm({
           value={draft.name}
         />
 
-        <View style={styles.colorField}>
-          <Text style={[typography.eyebrow, { color: theme.colors.textSecondary }]}>
-            Color
-          </Text>
-          <View style={styles.colorGrid}>
+        <View>
+          <SectionHeader>Color</SectionHeader>
+          <View style={selectionTile.grid}>
             {habitColors.map((option) => {
               const selected = draft.color === option.value;
               const swatchColor = resolveHabitColor(option.value, theme.dark);
@@ -120,7 +120,7 @@ export function TrackerEditorForm({
                     }));
                   }}
                   style={({ pressed }) => [
-                    styles.colorChoice,
+                    selectionTile.tile,
                     {
                       backgroundColor: swatchColor,
                       borderColor: selected
@@ -144,21 +144,19 @@ export function TrackerEditorForm({
           </View>
         </View>
 
-        <View style={styles.goalField}>
-          <Text style={[typography.eyebrow, { color: theme.colors.textSecondary }]}>
-            Goal
-          </Text>
+        <View>
+          <SectionHeader>Goal</SectionHeader>
           <View
             style={[
               styles.goalCard,
               {
-                backgroundColor: theme.colors.surface,
+                backgroundColor: theme.colors.groupedSurface,
                 borderColor: theme.colors.border,
               },
             ]}
           >
             <View style={styles.targetRow}>
-              <Text style={[styles.rowLabelText, { color: theme.colors.text }]}>
+              <Text style={[typography.body, { color: theme.colors.text }]}>
                 Times
               </Text>
               <View
@@ -209,7 +207,13 @@ export function TrackerEditorForm({
                     strokeWidth={2}
                   />
                 </Pressable>
-                <Text style={[styles.stepperValue, { color: theme.colors.text }]}>
+                <Text
+                  style={[
+                    typography.headline,
+                    styles.stepperValue,
+                    { color: theme.colors.text },
+                  ]}
+                >
                   {draft.goal.targetCount}
                 </Text>
                 <Pressable
@@ -252,7 +256,7 @@ export function TrackerEditorForm({
               ]}
             />
             <View style={styles.periodRow}>
-              <Text style={[styles.rowLabelText, { color: theme.colors.text }]}>
+              <Text style={[typography.body, { color: theme.colors.text }]}>
                 Every
               </Text>
               <NativeMenuPicker<TrackerGoalPeriod>
@@ -300,7 +304,7 @@ export function TrackerEditorForm({
                   size={20}
                   strokeWidth={1.8}
                 />
-                <Text style={[styles.rowLabelText, { color: theme.colors.text }]}>
+                <Text style={[typography.body, { color: theme.colors.text }]}>
                   Start Date
                 </Text>
               </View>
@@ -316,7 +320,7 @@ export function TrackerEditorForm({
               >
                 <Text
                   numberOfLines={1}
-                  style={[styles.rowControlText, { color: theme.colors.text }]}
+                  style={[typography.body, { color: theme.colors.text }]}
                 >
                   {formattedStartDate(draft.goal.startDate)}
                 </Text>
@@ -354,7 +358,7 @@ function formattedStartDate(value: string) {
 
 const styles = StyleSheet.create({
   form: {
-    gap: spacing.xl,
+    gap: spacing.xs,
   },
   iconPreviewArea: {
     alignItems: 'center',
@@ -378,22 +382,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 0,
   },
-  colorField: { gap: spacing.sm },
-  colorGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  colorChoice: {
-    alignItems: 'center',
-    borderRadius: radius.sm,
-    borderWidth: 3,
-    height: 44,
-    justifyContent: 'center',
-    width: 44,
-  },
-  goalField: { gap: spacing.sm },
   goalCard: {
+    borderCurve: 'continuous',
     borderRadius: radius.md,
     borderWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: spacing.md,
@@ -425,10 +415,7 @@ const styles = StyleSheet.create({
     width: 36,
   },
   stepperValue: {
-    fontSize: 17,
     fontVariant: ['tabular-nums'],
-    fontWeight: '500',
-    letterSpacing: -0.15,
     minWidth: 24,
     textAlign: 'center',
   },
@@ -457,15 +444,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.xxs,
     paddingHorizontal: spacing.sm,
-  },
-  rowControlText: {
-    fontSize: 16,
-    fontWeight: '400',
-    letterSpacing: -0.15,
-  },
-  rowLabelText: {
-    fontSize: 16,
-    fontWeight: '500',
-    letterSpacing: -0.15,
   },
 });

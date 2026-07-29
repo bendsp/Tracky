@@ -188,7 +188,7 @@ export function UniversalAdd() {
                 size={18}
               />
               <Text
-                style={[typography.label, { color: theme.colors.textSecondary }]}
+                style={[typography.footnote, { color: theme.colors.textSecondary }]}
               >
                 Previous activities
               </Text>
@@ -204,7 +204,7 @@ export function UniversalAdd() {
             />
             <View style={styles.colorField}>
               <Text
-                style={[typography.label, { color: theme.colors.textSecondary }]}
+                style={[typography.footnote, { color: theme.colors.textSecondary }]}
               >
                 Accent color
               </Text>
@@ -300,7 +300,7 @@ export function UniversalAdd() {
                       <Text
                         numberOfLines={1}
                         style={[
-                          typography.cardTitle,
+                          typography.headline,
                           styles.activityOptionLabel,
                           { color: theme.colors.text },
                         ]}
@@ -352,7 +352,7 @@ export function UniversalAdd() {
                   strokeWidth={2.2}
                 />
               </View>
-              <Text style={[typography.cardTitle, { color: theme.colors.text }]}>
+              <Text style={[typography.headline, { color: theme.colors.text }]}>
                 New activity
               </Text>
             </Pressable>
@@ -446,6 +446,7 @@ const styles = StyleSheet.create({
   activityList: { gap: spacing.xs },
   activityOption: {
     alignItems: 'center',
+    borderCurve: 'continuous',
     borderRadius: radius.md,
     borderWidth: 1,
     flexDirection: 'row',
@@ -461,6 +462,7 @@ const styles = StyleSheet.create({
   activityOptionLabel: { flex: 1 },
   newActivityOption: {
     alignItems: 'center',
+    borderCurve: 'continuous',
     borderRadius: radius.md,
     flexDirection: 'row',
     gap: spacing.md,

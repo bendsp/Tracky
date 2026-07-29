@@ -1,40 +1,29 @@
 import { Stack } from 'expo-router';
-import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { spacing, type as typography } from '../src/design/theme';
+import { nativeStackOptions } from '../src/navigation/screenOptions';
 import { useTracky } from '../src/store/TrackyProvider';
 
 export default function PrivacyScreen() {
   const { theme } = useTracky();
 
   return (
-    <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
+    // The ScrollView has to be the screen's first child or the native large
+    // title will not collapse on scroll.
+    <ScrollView
+      contentInsetAdjustmentBehavior="automatic"
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+      style={{ backgroundColor: theme.colors.background }}
+    >
       <Stack.Screen
         options={{
-          contentStyle: { backgroundColor: theme.colors.background },
-          headerBackButtonDisplayMode: 'minimal',
-          headerBlurEffect:
-            Platform.OS === 'ios' &&
-            Number.parseInt(String(Platform.Version), 10) < 26
-              ? 'systemChromeMaterial'
-              : undefined,
-          headerShadowVisible: false,
+          ...nativeStackOptions(theme),
           headerShown: true,
-          headerStyle:
-            Platform.OS === 'ios'
-              ? { backgroundColor: 'transparent' }
-              : { backgroundColor: theme.colors.background },
-          headerTintColor: theme.colors.accent,
-          headerTitleStyle: { color: theme.colors.text },
-          headerTransparent: Platform.OS === 'ios',
           title: 'Privacy',
         }}
       />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
         <PolicySection title="Your data stays yours">
           Tracky stores your activity timeline, trackers, entries, optional notes,
           and appearance preference in the app’s local storage on this device. It
@@ -77,11 +66,12 @@ export default function PrivacyScreen() {
           receive information about your visit.
         </PolicySection>
 
-        <Text style={[typography.caption, { color: theme.colors.textSecondary }]}>
-          Last updated July 27, 2026
-        </Text>
-      </ScrollView>
-    </View>
+      <Text
+        style={[typography.footnote, { color: theme.colors.textSecondary }]}
+      >
+        Last updated July 27, 2026
+      </Text>
+    </ScrollView>
   );
 }
 
@@ -97,7 +87,7 @@ function PolicySection({
     <View style={styles.section}>
       <Text
         accessibilityRole="header"
-        style={[typography.articleTitle, { color: theme.colors.text }]}
+        style={[typography.title3, { color: theme.colors.text }]}
       >
         {title}
       </Text>
@@ -109,7 +99,6 @@ function PolicySection({
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1 },
   content: {
     gap: spacing.xl,
     paddingBottom: spacing.xxxl,

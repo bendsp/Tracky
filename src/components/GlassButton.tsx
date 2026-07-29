@@ -53,7 +53,7 @@ export function GlassButton({
       {label ? (
         <Text
           style={[
-            typography.label,
+            typography.headline,
             {
               color: disabled
                 ? theme.colors.textTertiary

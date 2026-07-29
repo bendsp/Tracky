@@ -101,7 +101,7 @@ export function ActivityEditorSheet({
       {timeError ? (
         <Text
           accessibilityRole="alert"
-          style={[typography.caption, { color: theme.colors.danger }]}
+          style={[typography.footnote, { color: theme.colors.danger }]}
         >
           {timeError}
         </Text>

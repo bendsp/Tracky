@@ -12,6 +12,7 @@ import {
   NativeSheetScreen,
   NativeSheetScrollView,
 } from '../src/components/NativeSheetScreen';
+import { SectionHeader } from '../src/components/Screen';
 import { TrackerIcon } from '../src/components/tracking/TrackerIcon';
 import {
   radius,
@@ -53,15 +54,7 @@ export default function LogTrackerSheet() {
       <NativeSheetScrollView
         contentContainerStyle={styles.content}
       >
-        <Text
-          style={[
-            typography.label,
-            styles.sectionTitle,
-            { color: theme.colors.textSecondary },
-          ]}
-        >
-          CHOOSE A TRACKER
-        </Text>
+        <SectionHeader>Choose a tracker</SectionHeader>
         {trackers.length ? (
           <View
             style={[
@@ -99,7 +92,7 @@ export default function LogTrackerSheet() {
                     style={[
                       styles.trackerIcon,
                       {
-                        backgroundColor: theme.colors.backgroundRaised,
+                        backgroundColor: theme.colors.background,
                         borderColor: theme.colors.border,
                       },
                     ]}
@@ -113,7 +106,7 @@ export default function LogTrackerSheet() {
                   <View style={styles.trackerCopy}>
                     <Text
                       style={[
-                        typography.cardTitle,
+                        typography.headline,
                         { color: theme.colors.text },
                       ]}
                     >
@@ -121,7 +114,7 @@ export default function LogTrackerSheet() {
                     </Text>
                     <Text
                       style={[
-                        typography.caption,
+                        typography.footnote,
                         { color: theme.colors.textSecondary },
                       ]}
                     >
@@ -134,7 +127,7 @@ export default function LogTrackerSheet() {
                       {
                         backgroundColor: status.complete
                           ? resolveHabitColor(tracker.color, theme.dark)
-                          : theme.colors.backgroundRaised,
+                          : theme.colors.background,
                         borderColor: status.complete
                           ? resolveHabitColor(tracker.color, theme.dark)
                           : theme.colors.border,
@@ -169,13 +162,8 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     paddingTop: spacing.md,
   },
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: '500',
-    letterSpacing: -0.15,
-    paddingHorizontal: spacing.xs,
-  },
   trackerGroup: {
+    borderCurve: 'continuous',
     borderRadius: radius.md,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',

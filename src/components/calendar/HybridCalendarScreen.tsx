@@ -526,7 +526,7 @@ const styles = StyleSheet.create({
   },
   controlCard: {
     borderCurve: 'continuous',
-    borderRadius: radius.xl,
+    borderRadius: radius.md,
     borderWidth: 1,
     elevation: 8,
     overflow: 'hidden',

@@ -28,7 +28,7 @@ export function EmptyState({
       <View style={[styles.icon, { backgroundColor: theme.colors.accentSoft }]}>
         <Icon color={theme.colors.accent} icon={icon} size={25} />
       </View>
-      <Text style={[typography.cardTitle, { color: theme.colors.text }]}>{title}</Text>
+      <Text style={[typography.headline, { color: theme.colors.text }]}>{title}</Text>
       {body ? (
         <Text
           style={[
@@ -47,13 +47,15 @@ export function EmptyState({
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
-    borderRadius: radius.lg,
+    borderCurve: 'continuous',
+    borderRadius: radius.md,
     borderWidth: 1,
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.xxl,
   },
   icon: {
     alignItems: 'center',
+    borderCurve: 'continuous',
     borderRadius: radius.md,
     height: 48,
     justifyContent: 'center',
