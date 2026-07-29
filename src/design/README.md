@@ -117,6 +117,11 @@ stays unit-testable (`tests/progressRing.test.ts`). Rules baked into it:
 
 - A goal of 1 draws an unbroken circle, not a single segment with a gap.
 - Segments tile the circumference exactly: `dash + gap === unit`.
+- The pattern is shifted by `startOffset` (half a gap) so gap *centres* land on
+  multiples of `unit`, putting one gap at 12 o'clock and making the ring
+  symmetric about the vertical axis. Drawing the first segment's edge at the top
+  instead makes the whole ring look rotated — it's the obvious-looking version
+  and it's wrong.
 - Gaps must exceed `strokeWidth`, because round caps eat `strokeWidth/2` at each
   end of every dash.
 - Above `MAX_RING_SEGMENTS` (12) the arcs stop being readable, so the ring
@@ -124,7 +129,13 @@ stays unit-testable (`tests/progressRing.test.ts`). Rules baked into it:
 - `count` is clamped into `[0, target]` — logging past the goal can't overfill.
 
 Use `colors.separator` for the unfilled track and `resolveHabitColor` for the
-fill. Stroke width is 3 at 56pt (list rows) and 5 at 116pt (the detail hero).
+fill.
+
+**Stroke width is derived from `size` (`RING_STROKE_RATIO`, 7.5% of diameter)
+and is not a prop.** Both terms of the gap formula scale with size too, so the
+ring is scale-invariant: a 56pt list ring and a 116pt hero ring are the same
+shape, not merely similar ones. Passing fixed pixel widths per call site is what
+made the hero ring look thinner than the list ring — don't reintroduce it.
 
 ## Selection grids
 

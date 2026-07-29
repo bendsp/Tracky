@@ -154,7 +154,6 @@ export default function TrackerDetailSheet() {
             color={resolveHabitColor(tracker.color, theme.dark)}
             count={goalStatus.count}
             size={116}
-            strokeWidth={5}
             target={goalStatus.targetCount}
             trackColor={theme.colors.separator}
           >

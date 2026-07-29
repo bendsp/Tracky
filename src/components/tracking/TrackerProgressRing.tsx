@@ -14,17 +14,17 @@ export function TrackerProgressRing({
   color,
   count,
   size,
-  strokeWidth = 3,
   target,
   trackColor,
 }: PropsWithChildren<{
   color: string;
   count: number;
   size: number;
-  strokeWidth?: number;
   target: number;
   trackColor: string;
 }>) {
+  // Stroke width is derived from `size`, never passed in, so every ring in the
+  // app reads as equally thick.
   const {
     circumference,
     dash,
@@ -33,8 +33,10 @@ export function TrackerProgressRing({
     radius,
     segmented,
     segments,
+    startOffset,
+    strokeWidth,
     unit,
-  } = progressRingGeometry({ count, size, strokeWidth, target });
+  } = progressRingGeometry({ count, size, target });
 
   const shared = {
     cx: size / 2,
@@ -60,7 +62,7 @@ export function TrackerProgressRing({
               key={index}
               stroke={index < filled ? color : trackColor}
               strokeDasharray={`${dash} ${circumference - dash}`}
-              strokeDashoffset={-index * unit}
+              strokeDashoffset={-(index * unit + startOffset)}
             />
           ))
         ) : (
