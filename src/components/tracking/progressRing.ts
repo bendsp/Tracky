@@ -17,6 +17,32 @@ export function ringStrokeWidth(size: number) {
 }
 
 /**
+ * Icon diameter as a fraction of the ring's. Derived for the same reason the
+ * stroke is: hand-set sizes drifted to 52% in list rows but 38% in the detail
+ * hero, which left the hero icon floating in dead space.
+ */
+export const RING_ICON_RATIO = 0.5;
+
+export function ringIconSize(size: number) {
+  return Math.round(size * RING_ICON_RATIO);
+}
+
+/**
+ * The two sizes Tracky draws a tracker ring at. The ring is the primary read on
+ * both screens, so it's sized as large as its container allows.
+ */
+export const RING_SIZE = {
+  /**
+   * Tracker list rows. The largest ring that still fits the 92pt row — going
+   * further grows every row and costs a tracker off the first screen, and eats
+   * into the ~188pt the tracker name has to work with.
+   */
+  row: 64,
+  /** The tracker detail hero, which has room to spare. */
+  hero: 132,
+} as const;
+
+/**
  * Lays out the ring around a tracker icon: one segment per required check-in in
  * the current goal period, filled as they're logged.
  *

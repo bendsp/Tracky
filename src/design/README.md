@@ -131,11 +131,26 @@ stays unit-testable (`tests/progressRing.test.ts`). Rules baked into it:
 Use `colors.separator` for the unfilled track and `resolveHabitColor` for the
 fill.
 
-**Stroke width is derived from `size` (`RING_STROKE_RATIO`, 7.5% of diameter)
-and is not a prop.** Both terms of the gap formula scale with size too, so the
-ring is scale-invariant: a 56pt list ring and a 116pt hero ring are the same
-shape, not merely similar ones. Passing fixed pixel widths per call site is what
-made the hero ring look thinner than the list ring — don't reintroduce it.
+**Everything about the ring is derived from one number — `size`.** Stroke is
+`RING_STROKE_RATIO` (7.5% of diameter) and is not a prop; the icon is
+`RING_ICON_RATIO` (50%) via `ringIconSize()`. Both terms of the gap formula
+scale with size too, so the ring is scale-invariant: the list and hero rings are
+the same shape, not merely similar ones.
+
+| | ring | stroke | icon | visible gap |
+| --- | --- | --- | --- | --- |
+| `RING_SIZE.row` | 64 | 4.8 | 32 | 5.8 |
+| `RING_SIZE.hero` | 132 | 9.9 | 66 | 11.9 |
+
+Hand-setting these per call site is what caused both bugs this system has had:
+the hero stroke ended up proportionally *thinner* than the list stroke, and the
+hero icon filled 38% of its ring against the list's 52%, leaving it adrift in
+dead space. Use `RING_SIZE` and the derived helpers.
+
+`RING_SIZE.row` is the largest ring that still fits the 92pt list row. Growing
+it further grows every row — costing a tracker off the first screen — and eats
+into the ~188pt a tracker name has to work with. Don't raise it without
+deciding that trade deliberately.
 
 ## Selection grids
 

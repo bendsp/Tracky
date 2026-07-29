@@ -3,13 +3,35 @@ import test from 'node:test';
 
 import {
   MAX_RING_SEGMENTS,
+  RING_SIZE,
   progressRingGeometry,
+  ringIconSize,
   ringStrokeWidth,
 } from '../src/components/tracking/progressRing';
 
 /** The two sizes the app actually renders. */
-const ROW = { size: 56 };
-const HERO = { size: 116 };
+const ROW = { size: RING_SIZE.row };
+const HERO = { size: RING_SIZE.hero };
+
+test('the icon clears the ring stroke at every size', () => {
+  for (const { size } of [ROW, HERO]) {
+    // Inner clear diameter, i.e. what's left inside the stroke on both sides.
+    const clear = size - 2 * ringStrokeWidth(size);
+    assert.ok(
+      ringIconSize(size) < clear,
+      `a ${ringIconSize(size)}pt icon collides with the stroke of a ${size}pt ring (clear: ${clear})`,
+    );
+  }
+});
+
+test('the icon fills the same fraction of every ring', () => {
+  // Hand-set sizes had drifted to 52% in list rows and 38% in the hero.
+  assert.ok(
+    Math.abs(
+      ringIconSize(ROW.size) / ROW.size - ringIconSize(HERO.size) / HERO.size,
+    ) < 0.01,
+  );
+});
 
 test('every ring is proportionally the same thickness', () => {
   const row = progressRingGeometry({ ...ROW, count: 0, target: 3 });
@@ -80,26 +102,39 @@ test('segments tile the circle exactly', () => {
   }
 });
 
+const EPSILON = 1e-6;
+
+/**
+ * Distance travelled around the circle, wrapped into [0, circumference).
+ * A centre that lands on the circumference is the same point as 0, and float
+ * error means `% circumference` alone won't always wrap it — so snap it.
+ */
+function wrap(distance: number, circumference: number) {
+  const wrapped = ((distance % circumference) + circumference) % circumference;
+  return circumference - wrapped < EPSILON ? 0 : wrapped;
+}
+
+/**
+ * Segment i spans [startOffset + i*unit, startOffset + i*unit + dash], so the
+ * gap that follows it is centred half a gap past its end.
+ */
+function gapCentres(ring: ReturnType<typeof progressRingGeometry>) {
+  return Array.from({ length: ring.segments }, (_, index) =>
+    wrap(
+      ring.startOffset + index * ring.unit + ring.dash + ring.gap / 2,
+      ring.circumference,
+    ),
+  ).sort((left, right) => left - right);
+}
+
 test('a gap is centred on 12 o’clock', () => {
   for (const target of [2, 3, 4, 5, 8, MAX_RING_SEGMENTS]) {
     for (const geometry of [ROW, HERO]) {
       const ring = progressRingGeometry({ ...geometry, count: 0, target });
-      // Segment i spans [startOffset + i*unit, startOffset + i*unit + dash],
-      // so the gap that follows it is centred half a gap past its end.
-      const gapCentres = Array.from(
-        { length: ring.segments },
-        (_, index) =>
-          (ring.startOffset + index * ring.unit + ring.dash + ring.gap / 2) %
-          ring.circumference,
-      );
-      // One of them must sit at the top of the circle (0, modulo the circle).
-      const atTop = gapCentres.some(
-        (centre) =>
-          Math.min(centre, ring.circumference - centre) < 1e-9,
-      );
+      const centres = gapCentres(ring);
       assert.ok(
-        atTop,
-        `target ${target} at size ${geometry.size} has no gap at 12 o'clock: ${gapCentres}`,
+        centres.some((centre) => centre < EPSILON),
+        `target ${target} at size ${geometry.size} has no gap at 12 o'clock: ${centres}`,
       );
     }
   }
@@ -109,24 +144,20 @@ test('gaps are symmetric about the vertical axis', () => {
   // The eye reads an asymmetric ring as rotated. Mirroring the gap centres
   // across the vertical axis has to reproduce the same set of centres.
   for (const target of [2, 3, 5, 7, MAX_RING_SEGMENTS]) {
-    const ring = progressRingGeometry({ ...HERO, count: 0, target });
-    const centres = Array.from(
-      { length: ring.segments },
-      (_, index) =>
-        (ring.startOffset + index * ring.unit + ring.dash + ring.gap / 2) %
-        ring.circumference,
-    ).sort((left, right) => left - right);
+    for (const geometry of [ROW, HERO]) {
+      const ring = progressRingGeometry({ ...geometry, count: 0, target });
+      const centres = gapCentres(ring);
+      const mirrored = centres
+        .map((centre) => wrap(-centre, ring.circumference))
+        .sort((left, right) => left - right);
 
-    const mirrored = centres
-      .map((centre) => (ring.circumference - centre) % ring.circumference)
-      .sort((left, right) => left - right);
-
-    centres.forEach((centre, index) => {
-      assert.ok(
-        Math.abs(centre - mirrored[index]) < 1e-6,
-        `target ${target} is not symmetric: ${centres} vs ${mirrored}`,
-      );
-    });
+      centres.forEach((centre, index) => {
+        assert.ok(
+          Math.abs(centre - mirrored[index]) < EPSILON,
+          `target ${target} at size ${geometry.size} is not symmetric: ${centres} vs ${mirrored}`,
+        );
+      });
+    }
   }
 });
 

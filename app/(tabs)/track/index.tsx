@@ -15,6 +15,10 @@ import {
 
 import { Icon } from '../../../src/components/Icon';
 import { TrackerIcon } from '../../../src/components/tracking/TrackerIcon';
+import {
+  RING_SIZE,
+  ringIconSize,
+} from '../../../src/components/tracking/progressRing';
 import { TrackerProgressRing } from '../../../src/components/tracking/TrackerProgressRing';
 import {
   radius,
@@ -194,14 +198,14 @@ function TrackerRow({
         <TrackerProgressRing
           color={resolveHabitColor(tracker.color, theme.dark)}
           count={status.count}
-          size={56}
+          size={RING_SIZE.row}
           target={status.targetCount}
           trackColor={theme.colors.separator}
         >
           <TrackerIcon
             color={theme.colors.text}
             name={tracker.icon}
-            size={29}
+            size={ringIconSize(RING_SIZE.row)}
           />
         </TrackerProgressRing>
         <View style={styles.rowCopy}>

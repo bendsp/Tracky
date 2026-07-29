@@ -19,6 +19,10 @@ import {
 } from '../src/components/NativeSheetScreen';
 import { SectionHeader } from '../src/components/Screen';
 import { TrackerIcon } from '../src/components/tracking/TrackerIcon';
+import {
+  RING_SIZE,
+  ringIconSize,
+} from '../src/components/tracking/progressRing';
 import { TrackerProgressRing } from '../src/components/tracking/TrackerProgressRing';
 import {
   radius,
@@ -153,14 +157,14 @@ export default function TrackerDetailSheet() {
           <TrackerProgressRing
             color={resolveHabitColor(tracker.color, theme.dark)}
             count={goalStatus.count}
-            size={116}
+            size={RING_SIZE.hero}
             target={goalStatus.targetCount}
             trackColor={theme.colors.separator}
           >
             <TrackerIcon
               color={theme.colors.text}
               name={tracker.icon}
-              size={44}
+              size={ringIconSize(RING_SIZE.hero)}
             />
           </TrackerProgressRing>
           <Text style={[typography.title2, { color: theme.colors.text }]}>
