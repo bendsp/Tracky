@@ -15,6 +15,7 @@ import {
 
 import { Icon } from '../../../src/components/Icon';
 import { TrackerIcon } from '../../../src/components/tracking/TrackerIcon';
+import { TrackerProgressRing } from '../../../src/components/tracking/TrackerProgressRing';
 import {
   radius,
   resolveHabitColor,
@@ -161,7 +162,12 @@ function TrackerRow({
 }: {
   onOpen: () => void;
   onQuickLog: () => void;
-  status: { complete: boolean; detail: string };
+  status: {
+    complete: boolean;
+    count: number;
+    detail: string;
+    targetCount: number;
+  };
   theme: Theme;
   tracker: Tracker;
 }) {
@@ -185,24 +191,19 @@ function TrackerRow({
           pressed && { opacity: 0.62 },
         ]}
       >
-        <View
-          style={[
-            styles.trackerIcon,
-            {
-              backgroundColor: theme.colors.background,
-              borderColor: status.complete
-                ? resolveHabitColor(tracker.color, theme.dark)
-                : theme.colors.border,
-              borderWidth: status.complete ? 3 : StyleSheet.hairlineWidth,
-            },
-          ]}
+        <TrackerProgressRing
+          color={resolveHabitColor(tracker.color, theme.dark)}
+          count={status.count}
+          size={56}
+          target={status.targetCount}
+          trackColor={theme.colors.separator}
         >
           <TrackerIcon
             color={theme.colors.text}
             name={tracker.icon}
             size={29}
           />
-        </View>
+        </TrackerProgressRing>
         <View style={styles.rowCopy}>
           <Text
             numberOfLines={1}
@@ -287,13 +288,6 @@ const styles = StyleSheet.create({
     paddingLeft: spacing.md,
     paddingRight: spacing.sm,
     paddingVertical: spacing.sm,
-  },
-  trackerIcon: {
-    alignItems: 'center',
-    borderRadius: radius.pill,
-    height: 56,
-    justifyContent: 'center',
-    width: 56,
   },
   rowCopy: { flex: 1, gap: spacing.xxs },
   quickAction: {

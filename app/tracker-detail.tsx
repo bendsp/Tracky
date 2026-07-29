@@ -19,6 +19,7 @@ import {
 } from '../src/components/NativeSheetScreen';
 import { SectionHeader } from '../src/components/Screen';
 import { TrackerIcon } from '../src/components/tracking/TrackerIcon';
+import { TrackerProgressRing } from '../src/components/tracking/TrackerProgressRing';
 import {
   radius,
   resolveHabitColor,
@@ -37,9 +38,6 @@ import { useTimeframeNow } from '../src/hooks/useTimeframeNow';
 import { useTrackerEditorSession } from '../src/store/TrackerEditorSession';
 import { useTracky } from '../src/store/TrackyProvider';
 import { successHaptic, tapHaptic } from '../src/utils/haptics';
-
-/** Width of the completion ring, in the tracker's colour. */
-const COMPLETION_RING = 3;
 
 function eventDay(iso: string) {
   return new Intl.DateTimeFormat(undefined, {
@@ -152,26 +150,20 @@ export default function TrackerDetailSheet() {
         ]}
       >
         <View style={styles.hero}>
-          <View
-            style={[
-              styles.heroIcon,
-              {
-                backgroundColor: theme.colors.background,
-                borderColor: completedGoal
-                  ? resolveHabitColor(tracker.color, theme.dark)
-                  : theme.colors.border,
-                borderWidth: completedGoal
-                  ? COMPLETION_RING
-                  : StyleSheet.hairlineWidth,
-              },
-            ]}
+          <TrackerProgressRing
+            color={resolveHabitColor(tracker.color, theme.dark)}
+            count={goalStatus.count}
+            size={116}
+            strokeWidth={5}
+            target={goalStatus.targetCount}
+            trackColor={theme.colors.separator}
           >
             <TrackerIcon
               color={theme.colors.text}
               name={tracker.icon}
               size={44}
             />
-          </View>
+          </TrackerProgressRing>
           <Text style={[typography.title2, { color: theme.colors.text }]}>
             {tracker.name}
           </Text>
@@ -431,13 +423,6 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingBottom: spacing.lg,
     paddingTop: spacing.lg,
-  },
-  heroIcon: {
-    alignItems: 'center',
-    borderRadius: radius.pill,
-    height: 116,
-    justifyContent: 'center',
-    width: 116,
   },
   statsCard: {
     alignItems: 'center',

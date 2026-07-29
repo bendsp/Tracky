@@ -104,6 +104,28 @@ Modals use `nativeSheetOptions`: full-height native form sheets.
 Screens inside `(tabs)` add `tabBarInset` to their scroll content padding. Don't
 hand-roll a clearance number.
 
+## Progress ring
+
+`TrackerProgressRing` wraps a tracker icon with one segment per required
+check-in in the current goal period, filled in the tracker's colour as they're
+logged — a "3 times per day" tracker with one check-in shows one of three
+segments filled. This is currently the only place a tracker's colour appears, so
+don't add a second, competing indicator.
+
+The geometry lives in `progressRing.ts`, kept free of React Native imports so it
+stays unit-testable (`tests/progressRing.test.ts`). Rules baked into it:
+
+- A goal of 1 draws an unbroken circle, not a single segment with a gap.
+- Segments tile the circumference exactly: `dash + gap === unit`.
+- Gaps must exceed `strokeWidth`, because round caps eat `strokeWidth/2` at each
+  end of every dash.
+- Above `MAX_RING_SEGMENTS` (12) the arcs stop being readable, so the ring
+  degrades to one continuous proportional arc.
+- `count` is clamped into `[0, target]` — logging past the goal can't overfill.
+
+Use `colors.separator` for the unfilled track and `resolveHabitColor` for the
+fill. Stroke width is 3 at 56pt (list rows) and 5 at 116pt (the detail hero).
+
 ## Selection grids
 
 Habit colours and tracker icons share `selectionTile` in
