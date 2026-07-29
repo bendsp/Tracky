@@ -19,9 +19,11 @@ export function GlassButton({
   onPress,
   prominent = false,
   compact = false,
+  fullWidth = false,
 }: {
   accessibilityLabel: string;
   disabled?: boolean;
+  fullWidth?: boolean;
   icon?: IconSvgElement;
   label?: string;
   onPress: () => void;
@@ -78,6 +80,7 @@ export function GlassButton({
       onPress={onPress}
       style={({ pressed }) => [
         styles.pressable,
+        fullWidth ? styles.fullWidth : null,
         { transform: [{ scale: pressed ? 0.95 : 1 }] },
       ]}
     >
@@ -85,7 +88,7 @@ export function GlassButton({
         <GlassView
           glassEffectStyle="regular"
           isInteractive={!disabled}
-          style={styles.glass}
+          style={[styles.glass, fullWidth ? styles.fullWidth : null]}
           tintColor={prominent && !disabled ? theme.colors.accent : undefined}
         >
           {content}
@@ -94,6 +97,7 @@ export function GlassButton({
         <View
           style={[
             styles.glass,
+            fullWidth ? styles.fullWidth : null,
             {
               backgroundColor: prominent
                 ? theme.colors.accent
@@ -110,6 +114,7 @@ export function GlassButton({
 
 const styles = StyleSheet.create({
   pressable: { borderRadius: radius.pill },
+  fullWidth: { width: '100%' },
   glass: {
     borderRadius: radius.pill,
     overflow: 'hidden',

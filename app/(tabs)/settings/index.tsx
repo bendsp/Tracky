@@ -4,6 +4,7 @@ import {
   FileImportIcon,
   Delete02Icon,
   RefreshIcon,
+  PlayCircleIcon,
   ShieldUserIcon,
   WalletDone01Icon,
 } from '@hugeicons/core-free-icons';
@@ -41,6 +42,7 @@ import {
   TrackyRollbackError,
 } from '../../../src/storage/trackyData';
 import { useTracky } from '../../../src/store/TrackyProvider';
+import { useOnboarding } from '../../../src/store/OnboardingProvider';
 import { useRevenueCat } from '../../../src/subscriptions/RevenueCatProvider';
 import {
   getPurchaseErrorMessage,
@@ -82,6 +84,7 @@ function prepareTrackyCache() {
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const { replayOnboarding } = useOnboarding();
   const {
     configurationError,
     isConfigured: purchasesConfigured,
@@ -409,6 +412,14 @@ export default function SettingsScreen() {
             icon={ShieldUserIcon}
             label="Privacy policy"
             onPress={() => router.push('/privacy')}
+          />
+          <View
+            style={[styles.separator, { backgroundColor: theme.colors.separator }]}
+          />
+          <SettingsRow
+            icon={PlayCircleIcon}
+            label="Replay introduction"
+            onPress={replayOnboarding}
           />
         </View>
         <Pressable

@@ -9,7 +9,12 @@ import {
   tabBarInset,
   type as typography,
 } from '../src/design/theme';
+import { Onboarding } from '../src/components/Onboarding';
 import { nativeSheetOptions } from '../src/navigation/screenOptions';
+import {
+  OnboardingProvider,
+  useOnboarding,
+} from '../src/store/OnboardingProvider';
 import { TrackerEditorSessionProvider } from '../src/store/TrackerEditorSession';
 import { useTracky, TrackyProvider } from '../src/store/TrackyProvider';
 import { RevenueCatProvider } from '../src/subscriptions/RevenueCatProvider';
@@ -23,8 +28,10 @@ function RootNavigator() {
     saveError,
     theme,
   } = useTracky();
+  const { completed: onboardingCompleted, ready: onboardingReady } =
+    useOnboarding();
 
-  if (!hydrated) {
+  if (!hydrated || !onboardingReady) {
     return (
       <View style={[styles.loading, { backgroundColor: theme.colors.background }]}>
         <ActivityIndicator color={theme.colors.accent} />
@@ -61,6 +68,15 @@ function RootNavigator() {
           </Text>
         </Pressable>
       </View>
+    );
+  }
+
+  if (!onboardingCompleted) {
+    return (
+      <>
+        <StatusBar style={theme.dark ? 'light' : 'dark'} />
+        <Onboarding />
+      </>
     );
   }
 
@@ -123,11 +139,13 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <TrackyProvider>
-        <TrackerEditorSessionProvider>
-          <RevenueCatProvider>
-            <RootNavigator />
-          </RevenueCatProvider>
-        </TrackerEditorSessionProvider>
+        <OnboardingProvider>
+          <TrackerEditorSessionProvider>
+            <RevenueCatProvider>
+              <RootNavigator />
+            </RevenueCatProvider>
+          </TrackerEditorSessionProvider>
+        </OnboardingProvider>
       </TrackyProvider>
     </GestureHandlerRootView>
   );
