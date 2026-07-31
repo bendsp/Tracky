@@ -5,6 +5,7 @@ import type {
   LocalDate,
   Routine,
   RoutineProgress,
+  RoutineRunStep,
   ScheduleRecurrence,
   Task,
   TrackedEvent,
@@ -228,6 +229,8 @@ export type DayPlanItem =
       kind: 'routine';
       source: Routine;
       progress: RoutineProgress | null;
+      /** The run's steps, already resolved from its snapshot or the template. */
+      steps: RoutineRunStep[];
       dayPart: DayPart;
       time: string | null;
       durationMinutes: number | null;
@@ -344,6 +347,7 @@ export function buildDayPlan({
       kind: 'routine',
       source: routine,
       progress,
+      steps: runSteps,
       dayPart: routine.schedule.dayPart,
       time: routine.schedule.time,
       durationMinutes,

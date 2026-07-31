@@ -13,7 +13,6 @@ import {
   type as typography,
   type Theme,
 } from '../../design/theme';
-import type { RoutineRunStep } from '../../domain/models';
 import type { DayPlanItem } from '../../domain/planning';
 import { Icon } from '../Icon';
 import { TrackerIcon } from '../tracking/TrackerIcon';
@@ -126,9 +125,7 @@ export function AgendaItemRow({
     );
   }
 
-  const steps: RoutineRunStep[] =
-    item.progress?.steps ??
-    item.source.steps.map((step) => ({ ...step, completedAt: null }));
+  const steps = item.steps;
   const expanded = override ?? !item.complete;
 
   return (

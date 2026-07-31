@@ -13,6 +13,7 @@ import {
   buildDayPlan,
   dayPlanSections,
   defaultDaySchedule,
+  EARLIER_TASK_HORIZON_DAYS,
   formatTimeRange,
   localDaysBetween,
   nowLinePlacement,
@@ -241,6 +242,19 @@ describe('day plan projection', () => {
         (item) => item.id,
       ),
       ['older'],
+    );
+  });
+
+  test('the backlog stops counting once a task falls out of the horizon', () => {
+    const inside = task({ id: 'inside', scheduledDate: '2026-07-16' });
+    const outside = task({ id: 'outside', scheduledDate: '2026-07-14' });
+
+    assert.equal(EARLIER_TASK_HORIZON_DAYS, 14);
+    assert.deepEqual(
+      unfinishedTasksBefore([inside, outside], '2026-07-29').map(
+        (item) => item.id,
+      ),
+      ['inside'],
     );
   });
 

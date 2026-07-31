@@ -34,53 +34,6 @@ export type NativeMenuAction = {
   systemImage?: SFSymbol;
 };
 
-/**
- * The trailing menu on a list row. This is a real SwiftUI `Menu`, so it gets
- * the system popover, its blur, its dismissal and its symbol alignment — the
- * hand-rolled alternative is a text glyph opening an `Alert`, which reads as an
- * error dialog rather than a menu.
- */
-export function NativeRowMenu({
-  accessibilityLabel,
-  actions,
-}: {
-  accessibilityLabel: string;
-  actions: NativeMenuAction[];
-}) {
-  const { theme } = useTracky();
-
-  return (
-    <Host
-      colorScheme={theme.scheme}
-      matchContents
-      seedColor={theme.colors.accent}
-      style={styles.rowMenu}
-    >
-      <Menu
-        label=""
-        modifiers={[
-          nativeAccessibilityLabel(accessibilityLabel),
-          buttonStyle('borderless'),
-          controlSize('regular'),
-          tint(theme.colors.textTertiary),
-          frame({ height: 44, width: 44 }),
-        ]}
-        systemImage="ellipsis.circle"
-      >
-        {actions.map((action) => (
-          <Button
-            key={action.id}
-            label={action.label}
-            onPress={action.onPress}
-            role={action.destructive ? 'destructive' : 'default'}
-            systemImage={action.systemImage}
-          />
-        ))}
-      </Menu>
-    </Host>
-  );
-}
-
 export function NativeSegmentedPicker<T extends string>({
   accessibilityLabel,
   onSelectionChange,
@@ -380,5 +333,4 @@ const styles = StyleSheet.create({
   fullWidth: { width: '100%' },
   nativePicker: { height: 34 },
   nativeToggle: { height: 32, width: 60 },
-  rowMenu: { height: 44, width: 44 },
 });
