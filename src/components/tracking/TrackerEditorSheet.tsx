@@ -345,7 +345,7 @@ export function TrackerEditorForm({
         </View>
 
         <View>
-          <SectionHeader>Time</SectionHeader>
+          <SectionHeader>Reminder</SectionHeader>
           <View
             style={[
               styles.timeCard,
@@ -359,7 +359,6 @@ export function TrackerEditorForm({
               <Text style={[typography.body, { color: theme.colors.text }]}>Time</Text>
               <Switch
                 accessibilityLabel="Set a time"
-                ios_backgroundColor={theme.colors.surfaceMuted}
                 onValueChange={(enabled) => {
                   selectionHaptic();
                   onDraftChange((current) => ({
@@ -369,10 +368,6 @@ export function TrackerEditorForm({
                       enabled ? current.schedule.time ?? '09:00' : null,
                     ),
                   }));
-                }}
-                trackColor={{
-                  false: theme.colors.surfaceMuted,
-                  true: theme.colors.accent,
                 }}
                 value={draft.schedule.time !== null}
               />
@@ -388,6 +383,7 @@ export function TrackerEditorForm({
                 <View style={styles.timePickerRow}>
                   <Text style={[typography.body, { color: theme.colors.text }]}>At</Text>
                   <NativeTimePicker
+                    compact
                     label="Time"
                     onChange={(date) => {
                       const time = localTimeOf(date);

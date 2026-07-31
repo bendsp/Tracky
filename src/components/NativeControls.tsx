@@ -242,10 +242,12 @@ export function NativeActionMenu({
 }
 
 export function NativeTimePicker({
+  compact = false,
   label,
   onChange,
   value,
 }: {
+  compact?: boolean;
   label: string;
   onChange: (value: Date) => void;
   value: Date;
@@ -258,7 +260,7 @@ export function NativeTimePicker({
       display="compact"
       mode="time"
       onValueChange={(_event, selectedDate) => onChange(selectedDate)}
-      style={styles.nativePicker}
+      style={compact ? styles.compactTime : styles.nativePicker}
       themeVariant={theme.scheme}
       value={value}
     />
@@ -331,6 +333,10 @@ const styles = StyleSheet.create({
     height: 36,
     minWidth: 96,
     overflow: 'hidden',
+  },
+  compactTime: {
+    height: 34,
+    width: 100,
   },
   detailMenu: {
     height: 44,
