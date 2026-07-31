@@ -6,6 +6,7 @@ import {
   Menu,
   Picker,
   Text,
+  Toggle,
 } from '@expo/ui/swift-ui';
 import {
   accessibilityLabel as nativeAccessibilityLabel,
@@ -13,9 +14,11 @@ import {
   buttonStyle,
   controlSize,
   frame,
+  labelsHidden,
   pickerStyle,
   tag,
   tint,
+  toggleStyle,
 } from '@expo/ui/swift-ui/modifiers';
 import { StyleSheet } from 'react-native';
 import type { SFSymbol } from 'sf-symbols-typescript';
@@ -267,6 +270,38 @@ export function NativeTimePicker({
   );
 }
 
+export function NativeToggle({
+  label,
+  onChange,
+  value,
+}: {
+  label: string;
+  onChange: (value: boolean) => void;
+  value: boolean;
+}) {
+  const { theme } = useTracky();
+
+  return (
+    <Host
+      colorScheme={theme.scheme}
+      matchContents
+      style={styles.nativeToggle}
+    >
+      <Toggle
+        isOn={value}
+        label={label}
+        modifiers={[
+          nativeAccessibilityLabel(label),
+          labelsHidden(),
+          toggleStyle('switch'),
+          frame({ height: 32, width: 60 }),
+        ]}
+        onIsOnChange={onChange}
+      />
+    </Host>
+  );
+}
+
 export function NativeDatePicker({
   compact = false,
   label,
@@ -344,5 +379,6 @@ const styles = StyleSheet.create({
   },
   fullWidth: { width: '100%' },
   nativePicker: { height: 34 },
+  nativeToggle: { height: 32, width: 60 },
   rowMenu: { height: 44, width: 44 },
 });

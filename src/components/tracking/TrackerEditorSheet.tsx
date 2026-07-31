@@ -9,7 +9,6 @@ import {
 import {
   Pressable,
   StyleSheet,
-  Switch,
   Text,
   View,
 } from 'react-native';
@@ -42,6 +41,7 @@ import { NativeSheetScrollView } from '../NativeSheetScreen';
 import {
   NativeMenuPicker,
   NativeTimePicker,
+  NativeToggle,
 } from '../NativeControls';
 import { SectionHeader } from '../Screen';
 import { selectionTile } from './selectionTile';
@@ -345,7 +345,7 @@ export function TrackerEditorForm({
         </View>
 
         <View>
-          <SectionHeader>Reminder</SectionHeader>
+          <SectionHeader>Time</SectionHeader>
           <View
             style={[
               styles.timeCard,
@@ -357,9 +357,9 @@ export function TrackerEditorForm({
           >
             <View style={styles.timeToggleRow}>
               <Text style={[typography.body, { color: theme.colors.text }]}>Time</Text>
-              <Switch
-                accessibilityLabel="Set a time"
-                onValueChange={(enabled) => {
+              <NativeToggle
+                label="Set a time"
+                onChange={(enabled) => {
                   selectionHaptic();
                   onDraftChange((current) => ({
                     ...current,
