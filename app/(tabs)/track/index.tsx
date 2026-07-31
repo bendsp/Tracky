@@ -10,10 +10,11 @@ import {
   isGlassEffectAPIAvailable,
 } from 'expo-glass-effect';
 import { Stack, useRouter } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
   Alert,
+  FlatList,
   Keyboard,
   Pressable,
   ScrollView,
@@ -21,29 +22,35 @@ import {
   Text,
   TextInput,
   View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GlassButton } from '../../../src/components/GlassButton';
 import { Icon } from '../../../src/components/Icon';
+import type { NativeMenuAction } from '../../../src/components/NativeControls';
 import { DayItemRow } from '../../../src/components/planning/DayItemRow';
 import { DayWeekStrip } from '../../../src/components/planning/DayWeekStrip';
 import { SectionHeader } from '../../../src/components/Screen';
 import {
+  navigationBarHeight,
   radius,
   spacing,
   tabBarInset,
   type as typography,
   type Theme,
 } from '../../../src/design/theme';
-import type { DayPart, LocalDate, TaskDraft } from '../../../src/domain/models';
+import type { LocalDate, TaskDraft } from '../../../src/domain/models';
 import {
-  buildDayPlan,
   addLocalDays,
+  buildDayPlan,
   dayPartLabels,
-  dayPartOrder,
-  isoWeekday,
+  dayPlanSections,
   localDateAtNoon,
-  plannedOrRecordedDateIds,
+  localDaysBetween,
+  nowLinePlacement,
+  partitionDayPlan,
   unfinishedTasksBefore,
   type DayPlanItem,
 } from '../../../src/domain/planning';
@@ -54,12 +61,15 @@ import { successHaptic, tapHaptic } from '../../../src/utils/haptics';
 
 const glassAvailable = isGlassEffectAPIAvailable();
 
+/**
+ * How far the day pager reaches in each direction. Normal swiping keeps this
+ * window stable; an external jump beyond it recentres once without animation,
+ * so week navigation stays effectively unbounded without invalid list indexes.
+ */
+const DAY_WINDOW = 180;
+
 function dayTitle(selectedDate: LocalDate, today: LocalDate) {
-  const selected = localDateAtNoon(selectedDate);
-  const todayDate = localDateAtNoon(today);
-  const difference = Math.round(
-    (selected.getTime() - todayDate.getTime()) / 86_400_000,
-  );
+  const difference = localDaysBetween(today, selectedDate);
   if (difference === 0) return 'Today';
   if (difference === 1) return 'Tomorrow';
   if (difference === -1) return 'Yesterday';
@@ -67,21 +77,219 @@ function dayTitle(selectedDate: LocalDate, today: LocalDate) {
     day: 'numeric',
     month: 'short',
     weekday: 'long',
-  }).format(selected);
-}
-
-function clockTime(date: Date) {
-  return `${String(date.getHours()).padStart(2, '0')}:${String(
-    date.getMinutes(),
-  ).padStart(2, '0')}`;
+  }).format(localDateAtNoon(selectedDate));
 }
 
 export default function TodayScreen() {
+  const insets = useSafeAreaInsets();
+  const { now, selectedDate, selectDate, today } = useDaySelection();
+  const { createTask, theme } = useTracky();
+
+  const [windowCenter, setWindowCenter] = useState<LocalDate>(today);
+  const anchor = useMemo(
+    () => addLocalDays(windowCenter, -DAY_WINDOW),
+    [windowCenter],
+  );
+  const dates = useMemo(
+    () =>
+      Array.from({ length: DAY_WINDOW * 2 + 1 }, (_, index) =>
+        addLocalDays(anchor, index),
+      ),
+    [anchor],
+  );
+  const selectedIndex = localDaysBetween(anchor, selectedDate);
+
+  const listRef = useRef<FlatList<LocalDate>>(null);
+  const [width, setWidth] = useState(0);
+  // The pager and the selected date drive each other, so each side records the
+  // index it just moved to and the other side skips the echo.
+  const settledIndex = useRef(selectedIndex);
+  const pendingRecenter = useRef(false);
+  const dragOriginIndex = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!width) return;
+
+    if (selectedIndex < 0 || selectedIndex >= dates.length) {
+      pendingRecenter.current = true;
+      settledIndex.current = DAY_WINDOW;
+      setWindowCenter(selectedDate);
+      return;
+    }
+
+    if (pendingRecenter.current) {
+      const frame = requestAnimationFrame(() => {
+        listRef.current?.scrollToIndex({
+          animated: false,
+          index: selectedIndex,
+        });
+        pendingRecenter.current = false;
+      });
+      return () => cancelAnimationFrame(frame);
+    }
+
+    if (settledIndex.current === selectedIndex) return;
+    const distance = Math.abs(settledIndex.current - selectedIndex);
+    settledIndex.current = selectedIndex;
+    listRef.current?.scrollToIndex({
+      animated: distance <= 7,
+      index: selectedIndex,
+    });
+  }, [dates.length, selectedDate, selectedIndex, width]);
+
+  const handleSettle = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (!width || pendingRecenter.current) return;
+      const rawIndex = Math.round(event.nativeEvent.contentOffset.x / width);
+      const origin = dragOriginIndex.current;
+      const index =
+        origin === null
+          ? rawIndex
+          : Math.max(origin - 1, Math.min(origin + 1, rawIndex));
+      dragOriginIndex.current = null;
+      if (index !== rawIndex) {
+        listRef.current?.scrollToIndex({ animated: true, index });
+      }
+      const date = dates[index];
+      if (!date || index === settledIndex.current) return;
+      settledIndex.current = index;
+      selectDate(date);
+    },
+    [dates, selectDate, width],
+  );
+
+  return (
+    <View
+      onLayout={({ nativeEvent }) => setWidth(nativeEvent.layout.width)}
+      style={[styles.screen, { backgroundColor: theme.colors.background }]}
+    >
+      <Stack.Screen
+        options={{
+          headerLargeTitleEnabled: false,
+          title: dayTitle(selectedDate, today),
+        }}
+      />
+      {selectedDate !== today ? (
+        <Stack.Toolbar placement="right">
+          <Stack.Toolbar.Button onPress={() => selectDate(today)}>
+            Today
+          </Stack.Toolbar.Button>
+        </Stack.Toolbar>
+      ) : null}
+
+      <View
+        style={[
+          styles.pinned,
+          {
+            backgroundColor: theme.colors.background,
+            paddingTop: insets.top + navigationBarHeight,
+          },
+        ]}
+      >
+        <WeekStrip selectedDate={selectedDate} selectDate={selectDate} today={today} />
+      </View>
+
+      {width > 0 ? (
+        <FlatList
+          data={dates}
+          decelerationRate="fast"
+          disableIntervalMomentum
+          getItemLayout={(_, index) => ({
+            index,
+            length: width,
+            offset: width * index,
+          })}
+          initialNumToRender={1}
+          initialScrollIndex={
+            selectedIndex >= 0 && selectedIndex < dates.length
+              ? selectedIndex
+              : DAY_WINDOW
+          }
+          horizontal
+          keyExtractor={(date) => date}
+          keyboardShouldPersistTaps="handled"
+          maxToRenderPerBatch={1}
+          onScrollBeginDrag={(event) => {
+            if (!width) return;
+            dragOriginIndex.current = Math.round(
+              event.nativeEvent.contentOffset.x / width,
+            );
+          }}
+          onMomentumScrollEnd={handleSettle}
+          onScrollToIndexFailed={({ index }) => {
+            listRef.current?.scrollToOffset({
+              animated: false,
+              offset: width * index,
+            });
+          }}
+          pagingEnabled
+          ref={listRef}
+          removeClippedSubviews
+          renderItem={({ item }) => (
+            <DayPage
+              date={item}
+              now={now}
+              selected={item === selectedDate}
+              today={today}
+              width={width}
+            />
+          )}
+          showsHorizontalScrollIndicator={false}
+          windowSize={3}
+        />
+      ) : null}
+
+      <QuickTaskComposer
+        createTask={createTask}
+        selectedDate={selectedDate}
+        theme={theme}
+      />
+    </View>
+  );
+}
+
+function WeekStrip({
+  selectDate,
+  selectedDate,
+  today,
+}: {
+  selectDate: (date: LocalDate) => void;
+  selectedDate: LocalDate;
+  today: LocalDate;
+}) {
+  const [visibleDate, setVisibleDate] = useState(selectedDate);
+
+  useEffect(() => {
+    setVisibleDate(selectedDate);
+  }, [selectedDate]);
+
+  return (
+    <DayWeekStrip
+      onChangeVisibleDate={setVisibleDate}
+      onSelectDate={selectDate}
+      selectedDate={selectedDate}
+      today={today}
+      visibleDate={visibleDate}
+    />
+  );
+}
+
+function DayPage({
+  date,
+  now,
+  selected,
+  today,
+  width,
+}: {
+  date: LocalDate;
+  now: Date;
+  selected: boolean;
+  today: LocalDate;
+  width: number;
+}) {
   const router = useRouter();
   const trackerEditor = useTrackerEditorSession();
-  const { now, selectedDate, selectDate, today } = useDaySelection();
   const {
-    createTask,
     deleteRoutine,
     deleteTask,
     events,
@@ -94,46 +302,27 @@ export default function TodayScreen() {
     toggleTrackerCheckIn,
     trackers,
   } = useTracky();
+  const [showSkipped, setShowSkipped] = useState(false);
 
   const plan = useMemo(
     () =>
       buildDayPlan({
-        date: selectedDate,
+        date,
         events,
         routineProgress,
         routines,
         tasks,
         trackers,
       }),
-    [events, routineProgress, routines, selectedDate, tasks, trackers],
+    [date, events, routineProgress, routines, tasks, trackers],
   );
-  const markedDateIds = useMemo(() => {
-    const weekStart = addLocalDays(
-      selectedDate,
-      -(isoWeekday(selectedDate) - 1),
-    );
-    const dates = Array.from({ length: 7 }, (_, index) =>
-      addLocalDays(weekStart, index),
-    );
-    return plannedOrRecordedDateIds({
-      dates,
-      events,
-      routineProgress,
-      routines,
-      tasks,
-      trackers,
-    });
-  }, [events, routineProgress, routines, selectedDate, tasks, trackers]);
+  const { active, skipped } = useMemo(() => partitionDayPlan(plan), [plan]);
+  const sections = useMemo(() => dayPlanSections(active), [active]);
+  const nowLine = date === today ? nowLinePlacement(sections, now) : null;
   const unfinished = useMemo(
-    () => selectedDate === today ? unfinishedTasksBefore(tasks, today) : [],
-    [selectedDate, tasks, today],
+    () => (date === today ? unfinishedTasksBefore(tasks, today) : []),
+    [date, tasks, today],
   );
-  const sections = dayPartOrder
-    .map((part) => ({
-      part,
-      items: plan.filter((item) => item.dayPart === part),
-    }))
-    .filter((section) => section.items.length);
 
   const openItem = (item: DayPlanItem) => {
     tapHaptic();
@@ -145,19 +334,19 @@ export default function TodayScreen() {
     } else if (item.kind === 'routine') {
       router.push({
         pathname: '/routine-runner',
-        params: { routineId: item.source.id, date: selectedDate },
+        params: { routineId: item.source.id, date },
       });
     } else {
       router.push({
         pathname: '/tracker-detail',
-        params: { trackerId: item.source.id, date: selectedDate },
+        params: { trackerId: item.source.id, date },
       });
     }
   };
 
   const completeItem = (item: DayPlanItem) => {
     if (item.skipped) {
-      setScheduleDateSkipped(item.kind, item.source.id, selectedDate, false);
+      setScheduleDateSkipped(item.kind, item.source.id, date, false);
       tapHaptic();
       return;
     }
@@ -168,271 +357,257 @@ export default function TodayScreen() {
     } else if (item.kind === 'routine') {
       openItem(item);
     } else {
-      const result = toggleTrackerCheckIn(
-        item.source.id,
-        selectedDate,
-        actionTime,
-      );
+      const result = toggleTrackerCheckIn(item.source.id, date, actionTime);
       if (result === 'completed') successHaptic();
       else if (result) tapHaptic();
     }
   };
 
-  const moreActions = (item: DayPlanItem) => {
-    const edit = () => {
-      if (item.kind === 'task') {
-        router.push({
-          pathname: '/task-editor',
-          params: { taskId: item.source.id },
-        });
-      } else if (item.kind === 'routine') {
-        router.push({
-          pathname: '/routine-editor',
-          params: { routineId: item.source.id },
-        });
-      } else {
-        trackerEditor.begin(item.source);
-        router.push('/tracker-editor');
-      }
-    };
-
+  const editItem = (item: DayPlanItem) => {
     if (item.kind === 'task') {
-      Alert.alert(item.source.name, undefined, [
-        { text: 'Edit', onPress: edit },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => deleteTask(item.source.id),
-        },
-        { text: 'Cancel', style: 'cancel' },
-      ]);
-      return;
+      router.push({
+        pathname: '/task-editor',
+        params: { taskId: item.source.id },
+      });
+    } else if (item.kind === 'routine') {
+      router.push({
+        pathname: '/routine-editor',
+        params: { routineId: item.source.id },
+      });
+    } else {
+      trackerEditor.begin(item.source);
+      router.push('/tracker-editor');
     }
+  };
 
-    const skipped = item.source.schedule.exceptions.some(
-      (exception) =>
-        exception.date === selectedDate && exception.behavior === 'skip',
-    );
-    Alert.alert(item.source.name, undefined, [
-      { text: 'Edit', onPress: edit },
-      {
-        text: skipped ? 'Restore this day' : 'Skip this day',
-        onPress: () =>
-          setScheduleDateSkipped(
-            item.kind,
-            item.source.id,
-            selectedDate,
-            !skipped,
-          ),
-      },
-      ...(item.kind === 'routine'
-        ? [
-            {
-              text: 'Delete routine',
-              style: 'destructive' as const,
-              onPress: () => deleteRoutine(item.source.id),
-            },
-          ]
-        : []),
+  const confirmDelete = (name: string, remove: () => void) => {
+    Alert.alert(`Delete ${name}?`, undefined, [
       { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: remove },
     ]);
   };
 
+  const actionsFor = (item: DayPlanItem): NativeMenuAction[] => {
+    const edit: NativeMenuAction = {
+      id: 'edit',
+      label: 'Edit',
+      systemImage: 'pencil',
+      onPress: () => editItem(item),
+    };
+    if (item.kind === 'task') {
+      return [
+        edit,
+        {
+          id: 'delete',
+          label: 'Delete',
+          systemImage: 'trash',
+          destructive: true,
+          onPress: () =>
+            confirmDelete(item.source.name, () => deleteTask(item.source.id)),
+        },
+      ];
+    }
+    const kind = item.kind;
+    return [
+      edit,
+      {
+        id: 'toggle-skip',
+        label: item.skipped ? 'Restore This Day' : 'Skip This Day',
+        systemImage: item.skipped ? 'arrow.uturn.backward' : 'moon.zzz',
+        onPress: () =>
+          setScheduleDateSkipped(kind, item.source.id, date, !item.skipped),
+      },
+      ...(kind === 'routine'
+        ? [
+            {
+              id: 'delete-routine',
+              label: 'Delete Routine',
+              systemImage: 'trash' as const,
+              destructive: true,
+              onPress: () =>
+                confirmDelete(item.source.name, () =>
+                  deleteRoutine(item.source.id),
+                ),
+            },
+          ]
+        : []),
+    ];
+  };
+
+  const renderRow = (item: DayPlanItem, divided: boolean) => (
+    <DayItemRow
+      actions={actionsFor(item)}
+      divided={divided}
+      item={item}
+      key={item.id}
+      onComplete={() => completeItem(item)}
+      onOpen={() => openItem(item)}
+      theme={theme}
+    />
+  );
+
+  const empty = !sections.length && !skipped.length && !unfinished.length;
+
   return (
-    <>
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={[
-          styles.content,
-          { paddingBottom: tabBarInset + 104 },
-        ]}
-        showsVerticalScrollIndicator={false}
-        style={{ backgroundColor: theme.colors.background }}
-      >
-        <Stack.Screen options={{ title: dayTitle(selectedDate, today) }} />
-        {selectedDate !== today ? (
-          <Stack.Toolbar placement="right">
-            <Stack.Toolbar.Button onPress={() => selectDate(today)}>
-              Today
-            </Stack.Toolbar.Button>
-          </Stack.Toolbar>
-        ) : null}
-
-        <DayWeekStrip
-          markedDateIds={markedDateIds}
-          onSelectDate={selectDate}
-          selectedDate={selectedDate}
-          today={today}
-        />
-
-        {unfinished.length ? (
-          <Pressable
-            accessibilityLabel={`${unfinished.length} unfinished ${unfinished.length === 1 ? 'task' : 'tasks'} from earlier`}
-            accessibilityRole="button"
-            onPress={() => router.push('/earlier-tasks')}
-            style={({ pressed }) => [
-              styles.earlier,
-              {
-                backgroundColor: theme.colors.surface,
-                borderColor: theme.colors.border,
-                opacity: pressed ? 0.62 : 1,
-              },
+    <ScrollView
+      accessibilityElementsHidden={!selected}
+      contentContainerStyle={[
+        styles.content,
+        { paddingBottom: tabBarInset + 104 },
+      ]}
+      showsVerticalScrollIndicator={false}
+      importantForAccessibility={selected ? 'auto' : 'no-hide-descendants'}
+      style={{ width }}
+    >
+      {unfinished.length ? (
+        <Pressable
+          accessibilityLabel={`${unfinished.length} unfinished ${unfinished.length === 1 ? 'task' : 'tasks'} from earlier`}
+          accessibilityRole="button"
+          onPress={() => router.push('/earlier-tasks')}
+          style={({ pressed }) => [
+            styles.earlier,
+            {
+              backgroundColor: theme.colors.surface,
+              borderColor: theme.colors.border,
+              opacity: pressed ? 0.62 : 1,
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.earlierIcon,
+              { backgroundColor: theme.colors.surfaceMuted },
             ]}
           >
-            <View
-              style={[
-                styles.earlierIcon,
-                { backgroundColor: theme.colors.surfaceMuted },
-              ]}
-            >
-              <Icon
-                color={theme.colors.textSecondary}
-                icon={Tick02Icon}
-                size={20}
-              />
-            </View>
-            <Text style={[typography.headline, { color: theme.colors.text }]}>
-              {unfinished.length} unfinished from earlier
-            </Text>
             <Icon
-              color={theme.colors.textTertiary}
-              icon={ArrowRight01Icon}
-              size={18}
+              color={theme.colors.textSecondary}
+              icon={Tick02Icon}
+              size={20}
             />
-          </Pressable>
-        ) : null}
-
-        {sections.map((section) => (
-          <DaySection
-            items={section.items}
-            key={section.part}
-            now={now}
-            onComplete={completeItem}
-            onMore={moreActions}
-            onOpen={openItem}
-            part={section.part}
-            selectedDate={selectedDate}
-            theme={theme}
-            today={today}
+          </View>
+          <Text style={[typography.headline, { color: theme.colors.text }]}>
+            {unfinished.length} unfinished from earlier
+          </Text>
+          <Icon
+            color={theme.colors.textTertiary}
+            icon={ArrowRight01Icon}
+            size={18}
           />
-        ))}
+        </Pressable>
+      ) : null}
 
-        {!sections.length && !unfinished.length ? (
-          <View style={styles.empty}>
+      {sections.map((section) => {
+        const line = nowLine?.part === section.part ? nowLine.index : -1;
+        return (
+          <View key={section.part}>
+            <SectionHeader>{dayPartLabels[section.part]}</SectionHeader>
             <View
               style={[
-                styles.emptyIcon,
+                styles.sectionCard,
                 {
                   backgroundColor: theme.colors.surface,
                   borderColor: theme.colors.border,
                 },
               ]}
             >
-              <Icon
-                color={theme.colors.textSecondary}
-                icon={Tick02Icon}
-                size={28}
-              />
+              {section.items.map((item, index) => (
+                <View key={item.id}>
+                  {line === index ? <NowLine theme={theme} /> : null}
+                  {renderRow(item, index > 0 || line === index)}
+                </View>
+              ))}
+              {line === section.items.length ? <NowLine theme={theme} /> : null}
             </View>
-            <Text style={[typography.title3, { color: theme.colors.text }]}>A clear day</Text>
+          </View>
+        );
+      })}
+
+      {skipped.length ? (
+        <View>
+          <Pressable
+            accessibilityLabel={`${skipped.length} skipped ${skipped.length === 1 ? 'item' : 'items'}`}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: showSkipped }}
+            onPress={() => {
+              tapHaptic();
+              setShowSkipped((current) => !current);
+            }}
+            style={({ pressed }) => [
+              styles.skippedToggle,
+              { opacity: pressed ? 0.58 : 1 },
+            ]}
+          >
             <Text
+              style={[typography.footnote, { color: theme.colors.textSecondary }]}
+            >
+              {skipped.length} skipped
+            </Text>
+            <Text
+              style={[typography.footnote, { color: theme.colors.textTertiary }]}
+            >
+              {showSkipped ? 'Hide' : 'Show'}
+            </Text>
+          </Pressable>
+          {showSkipped ? (
+            <View
               style={[
-                typography.subheadline,
-                styles.emptyCopy,
-                { color: theme.colors.textSecondary },
+                styles.sectionCard,
+                {
+                  backgroundColor: theme.colors.surface,
+                  borderColor: theme.colors.border,
+                },
               ]}
             >
-              Add something you want to remember, then get back to your day.
-            </Text>
-          </View>
-        ) : null}
-      </ScrollView>
+              {skipped.map((item, index) => renderRow(item, index > 0))}
+            </View>
+          ) : null}
+        </View>
+      ) : null}
 
-      <QuickTaskComposer
-        createTask={createTask}
-        selectedDate={selectedDate}
-        theme={theme}
-      />
-    </>
-  );
-}
-
-function DaySection({
-  items,
-  now,
-  onComplete,
-  onMore,
-  onOpen,
-  part,
-  selectedDate,
-  theme,
-  today,
-}: {
-  items: DayPlanItem[];
-  now: Date;
-  onComplete: (item: DayPlanItem) => void;
-  onMore: (item: DayPlanItem) => void;
-  onOpen: (item: DayPlanItem) => void;
-  part: DayPart;
-  selectedDate: LocalDate;
-  theme: Theme;
-  today: LocalDate;
-}) {
-  const nowTime = clockTime(now);
-  const currentPart = now.getHours() < 12
-    ? 'morning'
-    : now.getHours() < 17
-      ? 'afternoon'
-      : 'evening';
-  const canShowNow =
-    selectedDate === today &&
-    part === currentPart &&
-    items.some((item) => item.time);
-  const nowIndex = canShowNow
-    ? items.findIndex((item) => !item.time || item.time >= nowTime)
-    : -1;
-  const insertionIndex = canShowNow
-    ? nowIndex === -1
-      ? items.length
-      : nowIndex
-    : -1;
-
-  return (
-    <View>
-      <SectionHeader>{dayPartLabels[part]}</SectionHeader>
-      <View
-        style={[
-          styles.sectionCard,
-          {
-            backgroundColor: theme.colors.surface,
-            borderColor: theme.colors.border,
-          },
-        ]}
-      >
-        {items.map((item, index) => (
-          <View key={item.id}>
-            {insertionIndex === index ? <NowLine theme={theme} /> : null}
-            <DayItemRow
-              divided={index > 0 || insertionIndex === index}
-              item={item}
-              onComplete={() => onComplete(item)}
-              onMore={() => onMore(item)}
-              onOpen={() => onOpen(item)}
-              theme={theme}
+      {empty ? (
+        <View style={styles.empty}>
+          <View
+            style={[
+              styles.emptyIcon,
+              {
+                backgroundColor: theme.colors.surface,
+                borderColor: theme.colors.border,
+              },
+            ]}
+          >
+            <Icon
+              color={theme.colors.textSecondary}
+              icon={Tick02Icon}
+              size={28}
             />
           </View>
-        ))}
-        {insertionIndex === items.length ? <NowLine theme={theme} /> : null}
-      </View>
-    </View>
+          <Text style={[typography.title3, { color: theme.colors.text }]}>
+            A clear day
+          </Text>
+          <Text
+            style={[
+              typography.subheadline,
+              styles.emptyCopy,
+              { color: theme.colors.textSecondary },
+            ]}
+          >
+            Add something you want to remember, then get back to your day.
+          </Text>
+        </View>
+      ) : null}
+    </ScrollView>
   );
 }
 
 function NowLine({ theme }: { theme: Theme }) {
   return (
     <View accessibilityLabel="Now" style={styles.nowLineRow}>
-      <Text style={[typography.caption2, { color: theme.colors.textTertiary }]}>Now</Text>
-      <View style={[styles.nowLine, { backgroundColor: theme.colors.separator }]} />
+      <Text style={[typography.caption2, { color: theme.colors.textTertiary }]}>
+        Now
+      </Text>
+      <View
+        style={[styles.nowLine, { backgroundColor: theme.colors.separator }]}
+      />
     </View>
   );
 }
@@ -571,6 +746,7 @@ const styles = StyleSheet.create({
   content: {
     gap: spacing.sm,
     paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
   },
   earlier: {
     alignItems: 'center',
@@ -613,11 +789,24 @@ const styles = StyleSheet.create({
     minHeight: 22,
     paddingHorizontal: spacing.md,
   },
+  pinned: {
+    paddingBottom: spacing.xs,
+    paddingHorizontal: spacing.md,
+    zIndex: 10,
+  },
+  screen: { flex: 1 },
   sectionCard: {
     borderCurve: 'continuous',
     borderRadius: radius.md,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
+  },
+  skippedToggle: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    minHeight: 34,
+    paddingHorizontal: spacing.xxs,
   },
   submit: {
     alignItems: 'center',

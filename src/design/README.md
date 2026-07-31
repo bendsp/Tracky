@@ -112,6 +112,13 @@ and toolbar buttons.
 Screens inside `(tabs)` add `tabBarInset` to their scroll content padding. Don't
 hand-roll a clearance number.
 
+Today is the one screen that turns the large title *off*
+(`headerLargeTitleEnabled: false`), because its week strip is pinned and a
+pinned view above the scroll view would stop the title collapsing anyway. Its
+title carries the selected date instead. A screen in that position has to place
+its own content below the transparent header: use
+`insets.top + navigationBarHeight`, not a literal.
+
 ## Progress ring
 
 `TrackerProgressRing` wraps a tracker icon with one segment per required

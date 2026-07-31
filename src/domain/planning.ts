@@ -83,11 +83,57 @@ export function isoWeekday(value: LocalDate): ISOWeekday {
   return (weekday === 0 ? 7 : weekday) as ISOWeekday;
 }
 
+/** Whole calendar days from `from` to `to`; negative when `to` is earlier. */
+export function localDaysBetween(from: LocalDate, to: LocalDate) {
+  return utcDayNumber(to) - utcDayNumber(from);
+}
+
+export function localTimeOf(date: Date) {
+  return `${String(date.getHours()).padStart(2, '0')}:${String(
+    date.getMinutes(),
+  ).padStart(2, '0')}`;
+}
+
 export function dayPartForTime(time: string): Exclude<DayPart, 'anytime'> {
   const hour = Number(time.slice(0, 2));
   if (hour < 12) return 'morning';
   if (hour < 17) return 'afternoon';
   return 'evening';
+}
+
+export function dayPartForDate(date: Date) {
+  return dayPartForTime(localTimeOf(date));
+}
+
+export function addMinutesToTime(time: string, minutes: number) {
+  const [hour, minute] = time.split(':').map(Number);
+  const total = hour * 60 + minute + minutes;
+  const wrapped = ((total % 1440) + 1440) % 1440;
+  return `${String(Math.floor(wrapped / 60)).padStart(2, '0')}:${String(
+    wrapped % 60,
+  ).padStart(2, '0')}`;
+}
+
+/**
+ * A duration is only meaningful next to the time it starts at, so the two are
+ * always formatted together: a start time plus a duration reads as the span it
+ * occupies rather than as two unrelated numbers.
+ */
+export function formatTimeRange(
+  time: string | null,
+  durationMinutes: number | null,
+) {
+  if (!time) return durationMinutes ? `${durationMinutes}m` : '';
+  if (!durationMinutes) return time;
+  return `${time}–${addMinutesToTime(time, durationMinutes)}`;
+}
+
+/** The estimated length of a run, or null when no step carries a duration. */
+export function routineStepMinutes(
+  steps: readonly { durationMinutes: number | null }[],
+) {
+  const total = steps.reduce((sum, step) => sum + (step.durationMinutes ?? 0), 0);
+  return total > 0 ? total : null;
 }
 
 export function defaultDaySchedule(startDate = localDateKey(new Date())): DaySchedule {
@@ -192,12 +238,7 @@ export type DayPlanItem =
       detail: string;
     };
 
-function displayDetail(time: string | null, durationMinutes: number | null) {
-  if (time && durationMinutes) return `${time} · ${durationMinutes}m`;
-  if (time) return time;
-  if (durationMinutes) return `${durationMinutes}m`;
-  return '';
-}
+const displayDetail = formatTimeRange;
 
 function trackerPlanDetail(
   tracker: Tracker,
@@ -250,15 +291,12 @@ export function buildDayPlan({
       source: tracker,
       dayPart: tracker.schedule.dayPart,
       time: tracker.schedule.time,
-      durationMinutes: tracker.schedule.durationMinutes,
+      durationMinutes: null,
       skipped,
       complete: status.complete,
       count: status.count,
       target: status.targetCount,
-      detail: displayDetail(
-        tracker.schedule.time,
-        tracker.schedule.durationMinutes,
-      ) || trackerPlanDetail(tracker, status),
+      detail: tracker.schedule.time || trackerPlanDetail(tracker, status),
     });
   }
 
@@ -296,6 +334,11 @@ export function buildDayPlan({
     }));
     const count = runSteps.filter((step) => step.completedAt).length;
     const target = Math.max(1, runSteps.length);
+    // A routine that hasn't been given its own duration still knows how long
+    // it takes, because its steps do.
+    const durationMinutes =
+      routine.schedule.durationMinutes ?? routineStepMinutes(runSteps);
+    const timing = displayDetail(routine.schedule.time, durationMinutes);
     items.push({
       id: `routine:${routine.id}`,
       kind: 'routine',
@@ -303,13 +346,13 @@ export function buildDayPlan({
       progress,
       dayPart: routine.schedule.dayPart,
       time: routine.schedule.time,
-      durationMinutes: routine.schedule.durationMinutes,
+      durationMinutes,
       skipped,
       complete: runSteps.length > 0 && count >= runSteps.length,
       count,
       target,
       detail: runSteps.length
-        ? `${count} of ${runSteps.length} steps${routine.schedule.time ? ` · ${routine.schedule.time}` : ''}`
+        ? `${count} of ${runSteps.length} steps${timing ? ` · ${timing}` : ''}`
         : 'No steps yet',
     });
   }
@@ -322,6 +365,68 @@ export function buildDayPlan({
     if (right.time) return 1;
     return left.source.createdAt.localeCompare(right.source.createdAt);
   });
+}
+
+export type DayPlanSection = { part: DayPart; items: DayPlanItem[] };
+
+/** Skipped items leave the day rather than sitting in it greyed out. */
+export function partitionDayPlan(items: DayPlanItem[]) {
+  const active: DayPlanItem[] = [];
+  const skipped: DayPlanItem[] = [];
+  for (const item of items) {
+    (item.skipped ? skipped : active).push(item);
+  }
+  return { active, skipped };
+}
+
+export function dayPlanSections(items: DayPlanItem[]): DayPlanSection[] {
+  return dayPartOrder
+    .map((part) => ({
+      part,
+      items: items.filter((item) => item.dayPart === part),
+    }))
+    .filter((section) => section.items.length > 0);
+}
+
+/**
+ * Where the "now" divider sits in the selected day, as a section and an index
+ * within it. This is deliberately total: on today, if any part-of-day section
+ * is on screen the line has a home, because a marker that appears only when
+ * some item happens to carry a time is less useful than no marker at all.
+ *
+ * Anytime is excluded — it has no position in the day, so a line through it
+ * would imply an ordering it doesn't have.
+ */
+export function nowLinePlacement(
+  sections: DayPlanSection[],
+  now: Date,
+): { part: DayPart; index: number } | null {
+  const placed = sections.filter((section) => section.part !== 'anytime');
+  if (!placed.length) return null;
+
+  const currentPart = dayPartForDate(now);
+  const currentRank = dayPartOrder.indexOf(currentPart);
+  const upcoming = placed.find(
+    (section) => dayPartOrder.indexOf(section.part) >= currentRank,
+  );
+
+  // Every section is already behind us — the line belongs at the very end.
+  if (!upcoming) {
+    const last = placed[placed.length - 1];
+    return { part: last.part, index: last.items.length };
+  }
+  // The current part has nothing in it, so the line sits above whatever the
+  // rest of the day starts with.
+  if (upcoming.part !== currentPart) return { part: upcoming.part, index: 0 };
+
+  const nowTime = localTimeOf(now);
+  const index = upcoming.items.findIndex(
+    (item) => !item.time || item.time >= nowTime,
+  );
+  return {
+    part: upcoming.part,
+    index: index === -1 ? upcoming.items.length : index,
+  };
 }
 
 export function unfinishedTasksBefore(tasks: Task[], date: LocalDate) {

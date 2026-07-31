@@ -1,7 +1,27 @@
 import { defaultHabitColor, normalizeHabitColor } from '../design/theme';
-import type { Tracker, TrackerDraft } from './models';
-import { defaultDaySchedule } from './planning';
+import type { DaySchedule, Tracker, TrackerDraft } from './models';
+import { dayPartForTime, defaultDaySchedule } from './planning';
 import { localDateKey } from './tracking';
+
+export function simplifiedTrackerSchedule(
+  schedule: DaySchedule,
+  time = schedule.time,
+): DaySchedule {
+  return {
+    ...schedule,
+    dayPart: time ? dayPartForTime(time) : 'anytime',
+    durationMinutes: null,
+    recurrence: { frequency: 'daily', interval: 1 },
+    time,
+  };
+}
+
+export function simplifiedTrackerDraft(draft: TrackerDraft): TrackerDraft {
+  return {
+    ...draft,
+    schedule: simplifiedTrackerSchedule(draft.schedule),
+  };
+}
 
 export function baseTrackerSummary(): TrackerDraft['summary'] {
   return {
@@ -29,7 +49,7 @@ export function newTrackerDraft(): TrackerDraft {
 }
 
 export function editableTrackerDraft(tracker: Tracker): TrackerDraft {
-  return {
+  return simplifiedTrackerDraft({
     name: tracker.name,
     icon: tracker.icon,
     color: normalizeHabitColor(tracker.color),
@@ -52,5 +72,5 @@ export function editableTrackerDraft(tracker: Tracker): TrackerDraft {
         : { ...field },
     ),
     summary: { ...tracker.summary },
-  };
+  });
 }

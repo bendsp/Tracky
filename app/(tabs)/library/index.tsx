@@ -66,7 +66,7 @@ export default function LibraryScreen() {
           >
             {trackers.map((tracker, index) => (
               <LibraryRow
-                detail={`${tracker.goal.targetCount} per ${tracker.goal.period} · ${scheduleDescription(tracker.schedule)}`}
+                detail={`${tracker.goal.targetCount} per ${tracker.goal.period}${tracker.schedule.time ? ` · ${tracker.schedule.time}` : ''}`}
                 divided={index > 0}
                 icon={<TrackerIcon color={theme.colors.text} name={tracker.icon} size={23} />}
                 key={tracker.id}

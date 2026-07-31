@@ -3,8 +3,6 @@ import {
   ArrowRight01Icon,
 } from '@hugeicons/core-free-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { runOnJS } from 'react-native-reanimated';
 
 import { radius, spacing, type as typography } from '../../design/theme';
 import type { LocalDate } from '../../domain/models';
@@ -25,142 +23,125 @@ function fullDateLabel(dateId: LocalDate, today: LocalDate) {
 }
 
 export function DayWeekStrip({
-  markedDateIds,
+  onChangeVisibleDate,
   onSelectDate,
   selectedDate,
   today,
+  visibleDate,
 }: {
-  markedDateIds: ReadonlySet<string>;
+  onChangeVisibleDate: (date: LocalDate) => void;
   onSelectDate: (date: LocalDate) => void;
   selectedDate: LocalDate;
   today: LocalDate;
+  visibleDate: LocalDate;
 }) {
   const { theme } = useTracky();
-  const weekStart = addLocalDays(selectedDate, -(isoWeekday(selectedDate) - 1));
+  const weekStart = addLocalDays(visibleDate, -(isoWeekday(visibleDate) - 1));
   const dates = Array.from({ length: 7 }, (_, index) =>
     addLocalDays(weekStart, index),
   );
   const monthLabel = new Intl.DateTimeFormat(undefined, {
     month: 'long',
     year: 'numeric',
-  }).format(localDateAtNoon(selectedDate));
+  }).format(localDateAtNoon(visibleDate));
   const weekdayFormatter = new Intl.DateTimeFormat(undefined, {
     weekday: 'narrow',
   });
 
+  // No horizontal gesture lives here: the day pager below owns swiping, and two
+  // horizontal surfaces stacked on each other read as one broken one. The
+  // arrows stay for browsing without changing the selected day.
   const shiftWeek = (amount: number) => {
     selectionHaptic();
-    onSelectDate(addLocalDays(selectedDate, amount * 7));
+    onChangeVisibleDate(addLocalDays(visibleDate, amount * 7));
   };
-  const pan = Gesture.Pan()
-    .activeOffsetX([-24, 24])
-    .failOffsetY([-14, 14])
-    .onEnd(({ translationX, velocityX }) => {
-      if (translationX < -56 || velocityX < -520) runOnJS(shiftWeek)(1);
-      else if (translationX > 56 || velocityX > 520) runOnJS(shiftWeek)(-1);
-    });
 
   return (
-    <GestureDetector gesture={pan}>
-      <View
-        accessibilityLabel={`Week of ${fullDateLabel(weekStart, today)}`}
-        style={[
-          styles.container,
-          {
-            backgroundColor: theme.colors.surface,
-            borderColor: theme.colors.border,
-          },
-        ]}
-      >
-        <View style={styles.header}>
-          <GlassButton
-            accessibilityLabel="Previous week"
-            compact
-            icon={ArrowLeft01Icon}
-            onPress={() => shiftWeek(-1)}
-          />
-          <Text style={[typography.headline, { color: theme.colors.text }]}>
-            {monthLabel}
-          </Text>
-          <GlassButton
-            accessibilityLabel="Next week"
-            compact
-            icon={ArrowRight01Icon}
-            onPress={() => shiftWeek(1)}
-          />
-        </View>
-        <View style={styles.week}>
-          {dates.map((date) => {
-            const selected = date === selectedDate;
-            const isToday = date === today;
-            const marked = markedDateIds.has(date);
-            const nativeDate = localDateAtNoon(date);
-            return (
-              <Pressable
-                accessibilityLabel={`${fullDateLabel(date, today)}${marked ? ', has items' : ''}`}
-                accessibilityRole="button"
-                accessibilityState={{ selected }}
-                key={date}
-                onPress={() => {
-                  selectionHaptic();
-                  onSelectDate(date);
-                }}
-                style={({ pressed }) => [
-                  styles.day,
-                  { opacity: pressed ? 0.52 : 1 },
+    <View
+      accessibilityLabel={`Week of ${fullDateLabel(weekStart, today)}`}
+      style={[
+        styles.container,
+        {
+          backgroundColor: theme.colors.surface,
+          borderColor: theme.colors.border,
+        },
+      ]}
+    >
+      <View style={styles.header}>
+        <GlassButton
+          accessibilityLabel="Previous week"
+          compact
+          icon={ArrowLeft01Icon}
+          onPress={() => shiftWeek(-1)}
+        />
+        <Text style={[typography.headline, { color: theme.colors.text }]}>
+          {monthLabel}
+        </Text>
+        <GlassButton
+          accessibilityLabel="Next week"
+          compact
+          icon={ArrowRight01Icon}
+          onPress={() => shiftWeek(1)}
+        />
+      </View>
+      <View style={styles.week}>
+        {dates.map((date) => {
+          const selected = date === selectedDate;
+          const isToday = date === today;
+          const nativeDate = localDateAtNoon(date);
+          return (
+            <Pressable
+              accessibilityLabel={fullDateLabel(date, today)}
+              accessibilityRole="button"
+              accessibilityState={{ selected }}
+              key={date}
+              onPress={() => {
+                selectionHaptic();
+                onSelectDate(date);
+              }}
+              style={({ pressed }) => [
+                styles.day,
+                { opacity: pressed ? 0.52 : 1 },
+              ]}
+            >
+              <Text
+                style={[
+                  typography.caption2,
+                  {
+                    color: isToday
+                      ? theme.colors.accent
+                      : theme.colors.textSecondary,
+                  },
+                ]}
+              >
+                {weekdayFormatter.format(nativeDate)}
+              </Text>
+              <View
+                style={[
+                  styles.numberCircle,
+                  selected && { backgroundColor: theme.colors.accent },
                 ]}
               >
                 <Text
                   style={[
-                    typography.caption2,
+                    typography.subheadline,
                     {
-                      color: isToday
-                        ? theme.colors.accent
-                        : theme.colors.textSecondary,
-                    },
-                  ]}
-                >
-                  {weekdayFormatter.format(nativeDate)}
-                </Text>
-                <View
-                  style={[
-                    styles.numberCircle,
-                    selected && { backgroundColor: theme.colors.accent },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      typography.subheadline,
-                      {
-                        color: selected
-                          ? theme.colors.onAccent
-                          : isToday
-                            ? theme.colors.accent
-                            : theme.colors.text,
-                      },
-                    ]}
-                  >
-                    {nativeDate.getDate()}
-                  </Text>
-                </View>
-                <View
-                  style={[
-                    styles.dot,
-                    {
-                      backgroundColor: marked
-                        ? selected
+                      color: selected
+                        ? theme.colors.onAccent
+                        : isToday
                           ? theme.colors.accent
-                          : theme.colors.textTertiary
-                        : 'transparent',
+                          : theme.colors.text,
                     },
                   ]}
-                />
-              </Pressable>
-            );
-          })}
-        </View>
+                >
+                  {nativeDate.getDate()}
+                </Text>
+              </View>
+            </Pressable>
+          );
+        })}
       </View>
-    </GestureDetector>
+    </View>
   );
 }
 
@@ -175,16 +156,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
     justifyContent: 'center',
-    minHeight: 58,
+    minHeight: 50,
     minWidth: 44,
   },
-  dot: { borderRadius: radius.pill, height: 4, marginTop: 2, width: 4 },
   header: {
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.sm,
-    paddingTop: spacing.sm,
+    paddingTop: spacing.xs,
   },
   numberCircle: {
     alignItems: 'center',
@@ -196,7 +176,7 @@ const styles = StyleSheet.create({
   },
   week: {
     flexDirection: 'row',
-    paddingBottom: spacing.xs,
+    paddingBottom: spacing.xxs,
     paddingHorizontal: spacing.xxs,
   },
 });

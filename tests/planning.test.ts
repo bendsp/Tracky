@@ -9,11 +9,20 @@ import type {
   ISOWeekday,
 } from '../src/domain/models';
 import {
+  addMinutesToTime,
   buildDayPlan,
+  dayPlanSections,
   defaultDaySchedule,
+  formatTimeRange,
+  localDaysBetween,
+  nowLinePlacement,
+  partitionDayPlan,
   plannedOrRecordedDateIds,
+  routineStepMinutes,
   scheduleOccursOn,
   unfinishedTasksBefore,
+  type DayPlanItem,
+  type DayPlanSection,
 } from '../src/domain/planning';
 
 const timestamp = '2026-07-27T08:00:00.000Z';
@@ -252,5 +261,166 @@ describe('day plan projection', () => {
     });
 
     assert.deepEqual([...marked], ['2026-07-31', '2026-08-02']);
+  });
+});
+
+function planItem(overrides: Partial<DayPlanItem> = {}): DayPlanItem {
+  return {
+    id: `task:${overrides.time ?? 'none'}`,
+    kind: 'task',
+    source: task(),
+    dayPart: 'morning',
+    time: null,
+    durationMinutes: null,
+    skipped: false,
+    complete: false,
+    count: 0,
+    target: 1,
+    detail: '',
+    ...overrides,
+  } as DayPlanItem;
+}
+
+function section(part: DayPlanSection['part'], times: (string | null)[]) {
+  return {
+    part,
+    items: times.map((time, index) =>
+      planItem({ dayPart: part, id: `${part}:${index}`, time }),
+    ),
+  };
+}
+
+describe('durations', () => {
+  test('a duration is read as the span it occupies, and wraps past midnight', () => {
+    assert.equal(addMinutesToTime('07:30', 20), '07:50');
+    assert.equal(addMinutesToTime('23:50', 25), '00:15');
+    assert.equal(formatTimeRange('07:30', 20), '07:30–07:50');
+    assert.equal(formatTimeRange('07:30', null), '07:30');
+    assert.equal(formatTimeRange(null, 20), '20m');
+    assert.equal(formatTimeRange(null, null), '');
+  });
+
+  test('a tracker time is a point, not a start and end range', () => {
+    const scheduled = tracker({
+      schedule: {
+        ...defaultDaySchedule('2026-07-27'),
+        dayPart: 'morning',
+        durationMinutes: 30,
+        time: '09:00',
+      },
+    });
+    const [item] = buildDayPlan({
+      date: '2026-07-29',
+      trackers: [scheduled],
+      events: [],
+      tasks: [],
+      routines: [],
+      routineProgress: [],
+    });
+
+    assert.equal(item.durationMinutes, null);
+    assert.equal(item.detail, '09:00');
+  });
+
+  test('a routine takes as long as its steps say it does', () => {
+    assert.equal(routineStepMinutes(routine().steps), 7);
+    assert.equal(
+      routineStepMinutes([{ durationMinutes: null }, { durationMinutes: null }]),
+      null,
+    );
+    assert.equal(routineStepMinutes([]), null);
+  });
+
+  test('a routine without its own duration reports its step total', () => {
+    const [item] = buildDayPlan({
+      date: '2026-07-29',
+      trackers: [],
+      events: [],
+      tasks: [],
+      routines: [routine()],
+      routineProgress: [],
+    });
+
+    assert.equal(item.durationMinutes, 7);
+    assert.equal(item.detail, '0 of 2 steps · 07:30–07:37');
+  });
+});
+
+describe('calendar-day distance', () => {
+  test('the window is measured in whole calendar days', () => {
+    assert.equal(localDaysBetween('2026-07-29', '2026-08-01'), 3);
+    assert.equal(localDaysBetween('2026-08-01', '2026-07-29'), -3);
+    assert.equal(localDaysBetween('2026-03-28', '2026-03-30'), 2);
+  });
+});
+
+describe('the day layout', () => {
+  test('skipped items leave the day rather than sitting in it', () => {
+    const items = [
+      planItem({ id: 'a' }),
+      planItem({ id: 'b', skipped: true } as Partial<DayPlanItem>),
+    ];
+    const { active, skipped } = partitionDayPlan(items);
+
+    assert.deepEqual(active.map((item) => item.id), ['a']);
+    assert.deepEqual(skipped.map((item) => item.id), ['b']);
+  });
+
+  test('empty parts of the day are not given headers', () => {
+    const sections = dayPlanSections([
+      planItem({ dayPart: 'evening', id: 'e' }),
+      planItem({ dayPart: 'morning', id: 'm' }),
+    ]);
+
+    assert.deepEqual(sections.map((item) => item.part), ['morning', 'evening']);
+  });
+
+  test('the now line sits before the first thing still ahead of you', () => {
+    const sections = [section('morning', ['08:00', '10:00', null])];
+    const placement = nowLinePlacement(
+      sections,
+      new Date('2026-07-29T09:00:00'),
+    );
+
+    assert.deepEqual(placement, { part: 'morning', index: 1 });
+  });
+
+  test('an empty current part pushes the line to the top of what is next', () => {
+    const sections = [section('evening', ['19:00'])];
+    const placement = nowLinePlacement(
+      sections,
+      new Date('2026-07-29T09:00:00'),
+    );
+
+    assert.deepEqual(placement, { part: 'evening', index: 0 });
+  });
+
+  test('a day entirely behind you puts the line at the very end', () => {
+    const sections = [section('morning', ['08:00', '09:00'])];
+    const placement = nowLinePlacement(
+      sections,
+      new Date('2026-07-29T20:00:00'),
+    );
+
+    assert.deepEqual(placement, { part: 'morning', index: 2 });
+  });
+
+  test('a current part with no times still gets the line', () => {
+    const sections = [section('morning', [null, null])];
+    const placement = nowLinePlacement(
+      sections,
+      new Date('2026-07-29T09:00:00'),
+    );
+
+    assert.deepEqual(placement, { part: 'morning', index: 0 });
+  });
+
+  test('anytime has no position in the day, so it never holds the line', () => {
+    const placement = nowLinePlacement(
+      [section('anytime', [null])],
+      new Date('2026-07-29T09:00:00'),
+    );
+
+    assert.equal(placement, null);
   });
 });

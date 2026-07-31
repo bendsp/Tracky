@@ -187,6 +187,16 @@ export const type = {
  */
 export const tabBarInset = 88;
 
+/**
+ * Height of a native navigation bar with its large title disabled. A screen
+ * that pins content directly below a *transparent* header has to place it
+ * itself, since nothing insets it automatically — add this to the top safe-area
+ * inset. Only reach for it when the header is transparent and the large title
+ * is off; anything scrolling under a standard header should keep using
+ * `contentInsetAdjustmentBehavior="automatic"` instead.
+ */
+export const navigationBarHeight = 44;
+
 export type Theme = ReturnType<typeof makeTheme>;
 
 export function resolveColorScheme(

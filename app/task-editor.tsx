@@ -8,8 +8,10 @@ import {
   NativeSheetScrollView,
 } from '../src/components/NativeSheetScreen';
 import {
+  NativeActionMenu,
   NativeDatePicker,
   NativeTimePicker,
+  type NativeMenuAction,
 } from '../src/components/NativeControls';
 import { SectionHeader } from '../src/components/Screen';
 import {
@@ -132,51 +134,55 @@ export default function TaskEditorScreen() {
     );
   };
 
-  const moveIntoRoutine = () => {
-    if (!cleanName) return;
-    const createNew = {
-      text: 'New routine…',
-      onPress: () =>
-        router.push({
-          pathname: '/routine-editor',
-          params: existing
-            ? { taskId: existing.id, taskName: cleanName }
-            : { taskName: cleanName },
-        }),
-    };
-    Alert.alert(
-      'Move into a routine',
-      routines.length
-        ? 'Choose where this should become a step.'
-        : 'Create a routine with this as its first step.',
-      [
-        ...routines.slice(0, 5).map((routine) => ({
-          text: routine.name,
-          onPress: () => {
-            updateRoutine(routine.id, {
-              name: routine.name,
-              icon: routine.icon,
-              color: routine.color,
-              schedule: routine.schedule,
-              steps: [
-                ...routine.steps,
-                {
-                  id: `routine_step_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-                  name: cleanName,
-                  durationMinutes: draft.durationMinutes,
-                },
-              ],
-            });
-            if (existing) deleteTask(existing.id);
-            successHaptic();
-            router.back();
-          },
-        })),
-        createNew,
-        { text: 'Cancel', style: 'cancel' },
-      ],
-    );
-  };
+  const routineActions = useMemo<NativeMenuAction[]>(
+    () => [
+      ...routines.map((routine) => ({
+        id: `routine:${routine.id}`,
+        label: routine.name,
+        systemImage: 'text.append' as const,
+        onPress: () => {
+          updateRoutine(routine.id, {
+            name: routine.name,
+            icon: routine.icon,
+            color: routine.color,
+            schedule: routine.schedule,
+            steps: [
+              ...routine.steps,
+              {
+                id: `routine_step_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+                name: cleanName,
+                durationMinutes: draft.durationMinutes,
+              },
+            ],
+          });
+          if (existing) deleteTask(existing.id);
+          successHaptic();
+          router.back();
+        },
+      })),
+      {
+        id: 'new-routine',
+        label: 'New Routine…',
+        systemImage: 'plus',
+        onPress: () =>
+          router.push({
+            pathname: '/routine-editor',
+            params: existing
+              ? { taskId: existing.id, taskName: cleanName }
+              : { taskName: cleanName },
+          }),
+      },
+    ],
+    [
+      cleanName,
+      deleteTask,
+      draft.durationMinutes,
+      existing,
+      router,
+      routines,
+      updateRoutine,
+    ],
+  );
 
   return (
     <NativeSheetScreen>
@@ -338,13 +344,27 @@ export default function TaskEditorScreen() {
               onPress={convertToTracker}
               theme={theme}
             />
-            <ActionRow
-              divided
-              disabled={!cleanName}
-              label="Move into a routine"
-              onPress={moveIntoRoutine}
-              theme={theme}
-            />
+            <View
+              style={[
+                styles.actionRow,
+                {
+                  borderTopColor: theme.colors.separator,
+                  borderTopWidth: StyleSheet.hairlineWidth,
+                  opacity: cleanName ? 1 : 0.34,
+                },
+              ]}
+            >
+              <Text style={[typography.body, { color: theme.colors.text }]}>
+                Move into a routine
+              </Text>
+              {cleanName ? (
+                <NativeActionMenu
+                  accessibilityLabel="Choose a routine for this task"
+                  actions={routineActions}
+                  label={routines.length ? 'Choose' : 'New Routine…'}
+                />
+              ) : null}
+            </View>
           </View>
         </View>
 

@@ -9,22 +9,23 @@ import {
 } from '../../design/theme';
 import type { DayPlanItem } from '../../domain/planning';
 import { Icon } from '../Icon';
+import { NativeRowMenu, type NativeMenuAction } from '../NativeControls';
 import { TrackerIcon } from '../tracking/TrackerIcon';
 import { RING_SIZE, ringIconSize } from '../tracking/progressRing';
 import { TrackerProgressRing } from '../tracking/TrackerProgressRing';
 
 export function DayItemRow({
+  actions,
   divided,
   item,
   onComplete,
-  onMore,
   onOpen,
   theme,
 }: {
+  actions: NativeMenuAction[];
   divided: boolean;
   item: DayPlanItem;
   onComplete: () => void;
-  onMore: () => void;
   onOpen: () => void;
   theme: Theme;
 }) {
@@ -129,18 +130,12 @@ export function DayItemRow({
         </Text>
       </Pressable>
 
-      <Pressable
-        accessibilityLabel={`More actions for ${item.source.name}`}
-        accessibilityRole="button"
-        hitSlop={4}
-        onPress={onMore}
-        style={({ pressed }) => [
-          styles.more,
-          { opacity: pressed ? 0.46 : 1 },
-        ]}
-      >
-        <Text style={[typography.headline, { color: theme.colors.textTertiary }]}>•••</Text>
-      </Pressable>
+      <View style={styles.more}>
+        <NativeRowMenu
+          accessibilityLabel={`More actions for ${item.source.name}`}
+          actions={actions}
+        />
+      </View>
     </View>
   );
 }

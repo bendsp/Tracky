@@ -120,9 +120,13 @@ function RootNavigator() {
         <Stack.Screen name="task-editor" options={formSheetOptions} />
         <Stack.Screen name="earlier-tasks" options={formSheetOptions} />
         <Stack.Screen name="routine-editor" options={formSheetOptions} />
+        {/*
+          A routine is a mode you enter and leave, not a page you browse, so it
+          takes the whole screen and dismisses with an explicit close.
+        */}
         <Stack.Screen
           name="routine-runner"
-          options={{ headerShown: true, presentation: 'card' }}
+          options={{ headerShown: true, presentation: 'fullScreenModal' }}
         />
         <Stack.Screen name="onboarding" options={formSheetOptions} />
       </Stack>
