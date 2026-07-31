@@ -12,8 +12,6 @@ test('the simplified tracker model keeps one optional time and no hidden schedul
     ...draft,
     schedule: {
       ...draft.schedule,
-      dayPart: 'evening',
-      durationMinutes: 30,
       recurrence: {
         frequency: 'weekly',
         interval: 2,
@@ -24,21 +22,18 @@ test('the simplified tracker model keeps one optional time and no hidden schedul
   });
 
   assert.equal(simplified.schedule.time, '14:15');
-  assert.equal(simplified.schedule.dayPart, 'afternoon');
-  assert.equal(simplified.schedule.durationMinutes, null);
   assert.deepEqual(simplified.schedule.recurrence, {
     frequency: 'daily',
     interval: 1,
   });
 });
 
-test('a tracker without a time is an anytime tracker', () => {
+test('a tracker can remain untimed', () => {
   const draft = newTrackerDraft();
   const simplified = simplifiedTrackerDraft({
     ...draft,
-    schedule: { ...draft.schedule, dayPart: 'morning', time: null },
+    schedule: { ...draft.schedule, time: null },
   });
 
   assert.equal(simplified.schedule.time, null);
-  assert.equal(simplified.schedule.dayPart, 'anytime');
 });

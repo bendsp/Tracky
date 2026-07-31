@@ -1,5 +1,4 @@
 import type {
-  DayPart,
   DaySchedule,
   EntityId,
   HexColor,
@@ -30,13 +29,6 @@ export type ActionIdentity = ActionTime & {
   id: EntityId;
 };
 
-const dayParts: DayPart[] = [
-  'morning',
-  'afternoon',
-  'evening',
-  'anytime',
-];
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
 }
@@ -49,20 +41,6 @@ function isISODateTime(value: unknown): value is ISODateTime {
   return (
     typeof value === 'string' && Number.isFinite(new Date(value).getTime())
   );
-}
-
-function isDuration(value: unknown): value is number | null {
-  return (
-    value === null ||
-    (typeof value === 'number' &&
-      Number.isInteger(value) &&
-      value >= 1 &&
-      value <= 1_440)
-  );
-}
-
-function isDayPart(value: unknown): value is DayPart {
-  return dayParts.includes(value as DayPart);
 }
 
 function isHexColor(value: unknown): value is HexColor {
@@ -94,9 +72,7 @@ function cleanSchedule(value: unknown): DaySchedule | null {
   if (
     !isRecord(value) ||
     !isLocalDate(value.startDate) ||
-    !isDayPart(value.dayPart) ||
     !(value.time === null || isLocalTime(value.time)) ||
-    !isDuration(value.durationMinutes) ||
     !Array.isArray(value.exceptions) ||
     !isRecord(value.recurrence)
   ) {
@@ -161,9 +137,7 @@ function cleanSchedule(value: unknown): DaySchedule | null {
 
   return {
     startDate: value.startDate,
-    dayPart: value.dayPart,
     time: value.time,
-    durationMinutes: value.durationMinutes,
     recurrence: cleanRecurrence,
     exceptions: cleanExceptions,
   };
@@ -173,9 +147,7 @@ function cleanTaskDraft(draft: TaskDraft): TaskDraft | null {
   if (
     !isNonEmptyString(draft.name) ||
     !isLocalDate(draft.scheduledDate) ||
-    !isDayPart(draft.dayPart) ||
-    !(draft.time === null || isLocalTime(draft.time)) ||
-    !isDuration(draft.durationMinutes)
+    !(draft.time === null || isLocalTime(draft.time))
   ) {
     return null;
   }
@@ -183,9 +155,7 @@ function cleanTaskDraft(draft: TaskDraft): TaskDraft | null {
   return {
     name: draft.name.trim(),
     scheduledDate: draft.scheduledDate,
-    dayPart: draft.dayPart,
     time: draft.time,
-    durationMinutes: draft.durationMinutes,
   };
 }
 
@@ -209,7 +179,6 @@ function cleanRoutineDraft(draft: RoutineDraft): RoutineDraft | null {
       !isRecord(step) ||
       !isNonEmptyString(step.id) ||
       !isNonEmptyString(step.name) ||
-      !isDuration(step.durationMinutes) ||
       stepIds.has(step.id)
     ) {
       return null;
@@ -218,7 +187,6 @@ function cleanRoutineDraft(draft: RoutineDraft): RoutineDraft | null {
     steps.push({
       id: step.id,
       name: step.name.trim(),
-      durationMinutes: step.durationMinutes,
     });
   }
 
@@ -240,7 +208,7 @@ function validIdentity(
     isISODateTime(identity.now) &&
     isNonEmptyString(identity.id) &&
     !collection.some((item) => item.id === identity.id) &&
-    state.schemaVersion === 6
+    state.schemaVersion === 7
   );
 }
 

@@ -19,7 +19,6 @@ import {
 import {
   isLocalDate,
   localDateAtNoon,
-  routineStepMinutes,
 } from '../src/domain/planning';
 import { localDateKey } from '../src/domain/tracking';
 import { useTracky } from '../src/store/TrackyProvider';
@@ -51,9 +50,6 @@ export default function RoutineRunnerScreen() {
   const currentIndex = steps.findIndex((step) => !step.completedAt);
   const current = currentIndex >= 0 ? steps[currentIndex] : null;
   const next = currentIndex >= 0 ? (steps[currentIndex + 1] ?? null) : null;
-  const remainingMinutes = routineStepMinutes(
-    steps.filter((step) => !step.completedAt),
-  );
 
   const close = () => {
     tapHaptic();
@@ -153,11 +149,7 @@ export default function RoutineRunnerScreen() {
                 { color: theme.colors.textSecondary },
               ]}
             >
-              {complete
-                ? dateLabel
-                : remainingMinutes
-                  ? `About ${remainingMinutes} min left`
-                  : dateLabel}
+              {dateLabel}
             </Text>
           </View>
         </View>
@@ -213,16 +205,6 @@ export default function RoutineRunnerScreen() {
               >
                 {current.name}
               </Text>
-              {current.durationMinutes ? (
-                <Text
-                  style={[
-                    typography.body,
-                    { color: theme.colors.textSecondary },
-                  ]}
-                >
-                  About {current.durationMinutes} minutes
-                </Text>
-              ) : null}
             </>
           ) : (
             <Text
@@ -362,16 +344,6 @@ export default function RoutineRunnerScreen() {
                   >
                     {step.name}
                   </Text>
-                  {step.durationMinutes ? (
-                    <Text
-                      style={[
-                        typography.footnote,
-                        { color: theme.colors.textTertiary },
-                      ]}
-                    >
-                      {step.durationMinutes}m
-                    </Text>
-                  ) : null}
                 </Pressable>
               );
             })}

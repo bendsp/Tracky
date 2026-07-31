@@ -9,7 +9,6 @@ import {
   NativeSheetScreen,
   NativeSheetScrollView,
 } from '../src/components/NativeSheetScreen';
-import { NativeMenuPicker } from '../src/components/NativeControls';
 import { ScheduleEditor } from '../src/components/planning/ScheduleEditor';
 import { SectionHeader } from '../src/components/Screen';
 import { TrackerIcon } from '../src/components/tracking/TrackerIcon';
@@ -33,14 +32,6 @@ import { localDateKey } from '../src/domain/tracking';
 import { requestPlanningNotificationPermission } from '../src/notifications/PlanningNotificationRuntime';
 import { useTracky } from '../src/store/TrackyProvider';
 import { successHaptic, tapHaptic } from '../src/utils/haptics';
-
-const durationOptions = [
-  { value: 'none', label: 'No estimate' },
-  ...[1, 2, 5, 10, 15, 20, 30, 45, 60].map((value) => ({
-    value: String(value),
-    label: `${value} min`,
-  })),
-] as const;
 
 function stepId() {
   return `routine_step_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -90,8 +81,6 @@ export default function RoutineEditorScreen() {
       color: defaultHabitColor,
       schedule: {
         ...defaultDaySchedule(sourceTask?.scheduledDate ?? localDateKey(new Date())),
-        dayPart: sourceTask?.dayPart ?? 'anytime',
-        durationMinutes: sourceTask?.durationMinutes ?? null,
         time: sourceTask?.time ?? null,
       },
       steps: importedName
@@ -99,10 +88,9 @@ export default function RoutineEditorScreen() {
             {
               id: stepId(),
               name: importedName,
-              durationMinutes: sourceTask?.durationMinutes ?? null,
             },
           ]
-        : [{ id: stepId(), name: '', durationMinutes: null }],
+        : [{ id: stepId(), name: '' }],
     };
   }, [existing, sourceTask, taskName]);
   const [draft, setDraft] = useState(initial);
@@ -273,46 +261,28 @@ export default function RoutineEditorScreen() {
                   placeholder="Brush teeth"
                   value={step.name}
                 />
-                <View style={styles.stepControls}>
-                  <NativeMenuPicker
-                    accessibilityLabel={`Duration for step ${index + 1}`}
-                    compact
-                    label={
-                      step.durationMinutes
-                        ? `${step.durationMinutes} min`
-                        : 'No estimate'
-                    }
-                    onSelectionChange={(value) =>
-                      updateStep(step.id, {
-                        durationMinutes: value === 'none' ? null : Number(value),
-                      })
-                    }
-                    options={durationOptions}
-                    selection={step.durationMinutes ? String(step.durationMinutes) : 'none'}
+                <View style={styles.orderControls}>
+                  <SmallTextButton
+                    disabled={index === 0}
+                    label="↑"
+                    onPress={() => moveStep(index, -1)}
                   />
-                  <View style={styles.orderControls}>
-                    <SmallTextButton
-                      disabled={index === 0}
-                      label="↑"
-                      onPress={() => moveStep(index, -1)}
-                    />
-                    <SmallTextButton
-                      disabled={index === draft.steps.length - 1}
-                      label="↓"
-                      onPress={() => moveStep(index, 1)}
-                    />
-                    <SmallTextButton
-                      label="×"
-                      onPress={() =>
-                        setDraft((current) => ({
-                          ...current,
-                          steps: current.steps.filter(
-                            (candidate) => candidate.id !== step.id,
-                          ),
-                        }))
-                      }
-                    />
-                  </View>
+                  <SmallTextButton
+                    disabled={index === draft.steps.length - 1}
+                    label="↓"
+                    onPress={() => moveStep(index, 1)}
+                  />
+                  <SmallTextButton
+                    label="×"
+                    onPress={() =>
+                      setDraft((current) => ({
+                        ...current,
+                        steps: current.steps.filter(
+                          (candidate) => candidate.id !== step.id,
+                        ),
+                      }))
+                    }
+                  />
                 </View>
               </View>
             ))}
@@ -326,7 +296,7 @@ export default function RoutineEditorScreen() {
                 ...current,
                 steps: [
                   ...current.steps,
-                  { id: stepId(), name: '', durationMinutes: null },
+                  { id: stepId(), name: '' },
                 ],
               }));
             }}
@@ -443,7 +413,7 @@ const styles = StyleSheet.create({
     width: '22%',
   },
   iconGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  orderControls: { flexDirection: 'row', gap: spacing.xs },
+  orderControls: { alignSelf: 'flex-end', flexDirection: 'row', gap: spacing.xs },
   smallButton: {
     alignItems: 'center',
     borderRadius: radius.pill,
@@ -457,11 +427,6 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     gap: spacing.sm,
     padding: spacing.md,
-  },
-  stepControls: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
   },
   steps: { gap: spacing.sm },
 });

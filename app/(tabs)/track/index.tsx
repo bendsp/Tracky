@@ -694,9 +694,7 @@ function QuickTaskComposer({
     const created = createTask({
       name: cleanName,
       scheduledDate: selectedDate,
-      dayPart: 'anytime',
       time: null,
-      durationMinutes: null,
     });
     if (!created) return;
     successHaptic();

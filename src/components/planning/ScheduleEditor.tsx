@@ -6,13 +6,10 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { radius, spacing, type as typography } from '../../design/theme';
 import type {
-  DayPart,
   DaySchedule,
   ISOWeekday,
 } from '../../domain/models';
 import {
-  dayPartForTime,
-  dayPartLabels,
   weekdayLabels,
 } from '../../domain/planning';
 import { useTracky } from '../../store/TrackyProvider';
@@ -23,7 +20,6 @@ import { NativeTimePicker } from '../NativeControls';
 import { SectionHeader } from '../Screen';
 
 const weekdays = [1, 2, 3, 4, 5, 6, 7] as ISOWeekday[];
-const durationOptions = [null, 5, 10, 15, 20, 30, 45, 60] as const;
 
 function timeDate(value: string | null) {
   const date = new Date();
@@ -55,20 +51,6 @@ export function ScheduleEditor({
   return (
     <>
       <View>
-        <SectionHeader>Part of day</SectionHeader>
-        <View style={styles.chips}>
-          {(Object.keys(dayPartLabels) as DayPart[]).map((part) => (
-            <ChoiceChip
-              key={part}
-              label={dayPartLabels[part]}
-              onPress={() => update({ dayPart: part })}
-              selected={schedule.dayPart === part}
-            />
-          ))}
-        </View>
-      </View>
-
-      <View>
         <SectionHeader>Time</SectionHeader>
         <View
           style={[
@@ -81,7 +63,7 @@ export function ScheduleEditor({
         >
           <View style={styles.controlRow}>
             <View style={styles.controlCopy}>
-              <Text style={[typography.body, { color: theme.colors.text }]}>Start</Text>
+              <Text style={[typography.body, { color: theme.colors.text }]}>At</Text>
               <Text
                 style={[
                   typography.footnote,
@@ -93,18 +75,15 @@ export function ScheduleEditor({
             </View>
             {schedule.time ? (
               <NativeTimePicker
-                label="Start time"
-                onChange={(date) => {
-                  const time = localTime(date);
-                  update({ time, dayPart: dayPartForTime(time) });
-                }}
+                label="Time"
+                onChange={(date) => update({ time: localTime(date) })}
                 value={timeDate(schedule.time)}
               />
             ) : (
               <Pressable
-                accessibilityLabel="Add a start time"
+                accessibilityLabel="Add a time"
                 accessibilityRole="button"
-                onPress={() => update({ time: '09:00', dayPart: 'morning' })}
+                onPress={() => update({ time: '09:00' })}
                 style={({ pressed }) => [
                   styles.textButton,
                   { opacity: pressed ? 0.55 : 1 },
@@ -116,7 +95,7 @@ export function ScheduleEditor({
           </View>
           {schedule.time ? (
             <Pressable
-              accessibilityLabel="Remove start time"
+              accessibilityLabel="Remove time"
               accessibilityRole="button"
               onPress={() => update({ time: null })}
               style={({ pressed }) => [
@@ -130,20 +109,6 @@ export function ScheduleEditor({
               <Text style={[typography.body, { color: theme.colors.textSecondary }]}>No exact time</Text>
             </Pressable>
           ) : null}
-        </View>
-      </View>
-
-      <View>
-        <SectionHeader>Estimated duration</SectionHeader>
-        <View style={styles.chips}>
-          {durationOptions.map((duration) => (
-            <ChoiceChip
-              key={duration ?? 'none'}
-              label={duration ? `${duration} min` : 'None'}
-              onPress={() => update({ durationMinutes: duration })}
-              selected={schedule.durationMinutes === duration}
-            />
-          ))}
         </View>
       </View>
 

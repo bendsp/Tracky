@@ -2,7 +2,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { ChoiceChip, Field } from '../src/components/Form';
+import { Field } from '../src/components/Form';
 import {
   NativeSheetScreen,
   NativeSheetScrollView,
@@ -19,10 +19,8 @@ import {
   spacing,
   type as typography,
 } from '../src/design/theme';
-import type { DayPart, TaskDraft } from '../src/domain/models';
+import type { TaskDraft } from '../src/domain/models';
 import {
-  dayPartForTime,
-  dayPartLabels,
   isLocalDate,
   localDateAtNoon,
 } from '../src/domain/planning';
@@ -31,8 +29,6 @@ import { localDateKey } from '../src/domain/tracking';
 import { requestPlanningNotificationPermission } from '../src/notifications/PlanningNotificationRuntime';
 import { useTracky } from '../src/store/TrackyProvider';
 import { successHaptic, tapHaptic } from '../src/utils/haptics';
-
-const durations = [null, 5, 10, 15, 20, 30, 45, 60] as const;
 
 function timeDate(value: string | null) {
   const date = new Date();
@@ -70,16 +66,12 @@ export default function TaskEditorScreen() {
         ? {
             name: existing.name,
             scheduledDate: existing.scheduledDate,
-            dayPart: existing.dayPart,
             time: existing.time,
-            durationMinutes: existing.durationMinutes,
           }
         : {
             name: '',
             scheduledDate: isLocalDate(date) ? date : localDateKey(new Date()),
-            dayPart: 'anytime',
             time: null,
-            durationMinutes: null,
           },
     [date, existing],
   );
@@ -115,8 +107,6 @@ export default function TaskEditorScreen() {
               },
               schedule: {
                 ...trackerDraft.schedule,
-                dayPart: draft.dayPart,
-                durationMinutes: draft.durationMinutes,
                 startDate: draft.scheduledDate,
                 time: draft.time,
               },
@@ -151,7 +141,6 @@ export default function TaskEditorScreen() {
               {
                 id: `routine_step_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
                 name: cleanName,
-                durationMinutes: draft.durationMinutes,
               },
             ],
           });
@@ -176,7 +165,6 @@ export default function TaskEditorScreen() {
     [
       cleanName,
       deleteTask,
-      draft.durationMinutes,
       existing,
       router,
       routines,
@@ -243,23 +231,7 @@ export default function TaskEditorScreen() {
         </View>
 
         <View>
-          <SectionHeader>Part of day</SectionHeader>
-          <View style={styles.chips}>
-            {(Object.keys(dayPartLabels) as DayPart[]).map((part) => (
-              <ChoiceChip
-                key={part}
-                label={dayPartLabels[part]}
-                onPress={() =>
-                  setDraft((current) => ({ ...current, dayPart: part }))
-                }
-                selected={draft.dayPart === part}
-              />
-            ))}
-          </View>
-        </View>
-
-        <View>
-          <SectionHeader>Start time</SectionHeader>
+          <SectionHeader>Time</SectionHeader>
           <View
             style={[
               styles.controlCard,
@@ -272,15 +244,13 @@ export default function TaskEditorScreen() {
             {draft.time ? (
               <>
                 <NativeTimePicker
-                  label="Task start time"
-                  onChange={(value) => {
-                    const time = timeKey(value);
+                  label="Task time"
+                  onChange={(value) =>
                     setDraft((current) => ({
                       ...current,
-                      time,
-                      dayPart: dayPartForTime(time),
-                    }));
-                  }}
+                      time: timeKey(value),
+                    }))
+                  }
                   value={timeDate(draft.time)}
                 />
                 <TextButton
@@ -299,31 +269,11 @@ export default function TaskEditorScreen() {
                     setDraft((current) => ({
                       ...current,
                       time: '09:00',
-                      dayPart: 'morning',
                     }))
                   }
                 />
               </>
             )}
-          </View>
-        </View>
-
-        <View>
-          <SectionHeader>Estimated duration</SectionHeader>
-          <View style={styles.chips}>
-            {durations.map((duration) => (
-              <ChoiceChip
-                key={duration ?? 'none'}
-                label={duration ? `${duration} min` : 'None'}
-                onPress={() =>
-                  setDraft((current) => ({
-                    ...current,
-                    durationMinutes: duration,
-                  }))
-                }
-                selected={draft.durationMinutes === duration}
-              />
-            ))}
           </View>
         </View>
 
@@ -462,7 +412,6 @@ const styles = StyleSheet.create({
     minHeight: 54,
     paddingHorizontal: spacing.md,
   },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   controlCard: {
     alignItems: 'center',
     borderCurve: 'continuous',

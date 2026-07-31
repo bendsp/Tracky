@@ -3,7 +3,6 @@ import {
   trackerIconNames,
   type ActivityBlock,
   type ActivityType,
-  type DayPart,
   type DaySchedule,
   type HexColor,
   type ISOWeekday,
@@ -27,10 +26,9 @@ import {
   type TrackyBackupPreview,
 } from '../domain/models';
 
-export const CURRENT_DATA_SCHEMA_VERSION = 6;
+export const CURRENT_DATA_SCHEMA_VERSION = 7;
 export const TRACKY_BACKUP_FORMAT_VERSION = 1;
 
-const MAX_DURATION_MINUTES = 24 * 60;
 const MAX_RECURRENCE_INTERVAL = 365;
 
 type UnknownRecord = Record<string, unknown>;
@@ -107,25 +105,6 @@ function isLocalTime(value: unknown): value is string {
   if (!isString(value) || !/^\d{2}:\d{2}$/.test(value)) return false;
   const [hour, minute] = value.split(':').map(Number);
   return hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59;
-}
-
-function isDayPart(value: unknown): value is DayPart {
-  return (
-    value === 'morning' ||
-    value === 'afternoon' ||
-    value === 'evening' ||
-    value === 'anytime'
-  );
-}
-
-function isDurationMinutes(value: unknown): value is number | null {
-  return (
-    value === null ||
-    (typeof value === 'number' &&
-      Number.isInteger(value) &&
-      value >= 1 &&
-      value <= MAX_DURATION_MINUTES)
-  );
 }
 
 function localDateFromInstant(value: string) {
@@ -254,8 +233,6 @@ function readGoal(value: unknown): TrackerGoal | null {
 function readSchedule(value: unknown): DaySchedule | null {
   if (
     !isRecord(value) ||
-    !isDayPart(value.dayPart) ||
-    !isDurationMinutes(value.durationMinutes) ||
     !Array.isArray(value.exceptions) ||
     !isRecord(value.recurrence) ||
     !isLocalDate(value.startDate) ||
@@ -321,8 +298,6 @@ function readSchedule(value: unknown): DaySchedule | null {
   }
 
   return {
-    dayPart: value.dayPart,
-    durationMinutes: value.durationMinutes,
     exceptions: exceptions as DaySchedule['exceptions'],
     recurrence,
     startDate: value.startDate,
@@ -438,9 +413,7 @@ function readTask(value: unknown): Task | null {
     !isNonEmptyString(value.id) ||
     !isNonEmptyString(value.name) ||
     !isLocalDate(value.scheduledDate) ||
-    !isDayPart(value.dayPart) ||
     !(value.time === null || isLocalTime(value.time)) ||
-    !isDurationMinutes(value.durationMinutes) ||
     !(value.completedAt === null || isFiniteDate(value.completedAt)) ||
     !isFiniteDate(value.createdAt) ||
     !isFiniteDate(value.updatedAt)
@@ -452,9 +425,7 @@ function readTask(value: unknown): Task | null {
     id: value.id,
     name: value.name.trim(),
     scheduledDate: value.scheduledDate,
-    dayPart: value.dayPart,
     time: value.time,
-    durationMinutes: value.durationMinutes,
     completedAt: value.completedAt,
     createdAt: value.createdAt,
     updatedAt: value.updatedAt,
@@ -465,15 +436,13 @@ function readRoutineStep(value: unknown): RoutineStep | null {
   if (
     !isRecord(value) ||
     !isNonEmptyString(value.id) ||
-    !isNonEmptyString(value.name) ||
-    !isDurationMinutes(value.durationMinutes)
+    !isNonEmptyString(value.name)
   ) {
     return null;
   }
   return {
     id: value.id,
     name: value.name.trim(),
-    durationMinutes: value.durationMinutes,
   };
 }
 
@@ -939,8 +908,6 @@ function migrateVersionFiveToSix(candidate: UnknownRecord): UnknownRecord {
     return {
       ...tracker,
       schedule: {
-        dayPart: 'anytime',
-        durationMinutes: null,
         exceptions: [],
         recurrence: { frequency: 'daily', interval: 1 },
         startDate: tracker.goal.startDate,
@@ -971,6 +938,15 @@ function migrateVersionFiveToSix(candidate: UnknownRecord): UnknownRecord {
   };
 }
 
+/**
+ * Current readers rebuild each entity explicitly, so advancing the version
+ * discards the retired planning metadata during validation while preserving
+ * dates, optional times, recurrence rules, and routine progress.
+ */
+function migrateVersionSixToSeven(candidate: UnknownRecord): UnknownRecord {
+  return { ...candidate, schemaVersion: 7 };
+}
+
 const migrations: Record<
   number,
   (candidate: UnknownRecord) => UnknownRecord
@@ -980,6 +956,7 @@ const migrations: Record<
   3: migrateVersionThreeToFour,
   4: migrateVersionFourToFive,
   5: migrateVersionFiveToSix,
+  6: migrateVersionSixToSeven,
 };
 
 function readSchemaVersion(candidate: UnknownRecord) {
@@ -1130,18 +1107,14 @@ export function sanitizeTaskDraft(draft: TaskDraft): TaskDraft | null {
   if (
     !name ||
     !isLocalDate(draft.scheduledDate) ||
-    !isDayPart(draft.dayPart) ||
-    !(draft.time === null || isLocalTime(draft.time)) ||
-    !isDurationMinutes(draft.durationMinutes)
+    !(draft.time === null || isLocalTime(draft.time))
   ) {
     return null;
   }
   return {
     name,
     scheduledDate: draft.scheduledDate,
-    dayPart: draft.dayPart,
     time: draft.time,
-    durationMinutes: draft.durationMinutes,
   };
 }
 

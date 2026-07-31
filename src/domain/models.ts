@@ -91,7 +91,6 @@ export type TrackerGoal = {
   startDate: LocalDate;
 };
 
-export type DayPart = 'morning' | 'afternoon' | 'evening' | 'anytime';
 export type ISOWeekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
 export type ScheduleRecurrence =
@@ -113,8 +112,6 @@ export type ScheduleException = {
  * schedule describes which days should offer the action.
  */
 export type DaySchedule = {
-  dayPart: DayPart;
-  durationMinutes: number | null;
   exceptions: ScheduleException[];
   recurrence: ScheduleRecurrence;
   startDate: LocalDate;
@@ -147,16 +144,13 @@ export type Task = EntityTimestamps & {
   id: EntityId;
   name: string;
   scheduledDate: LocalDate;
-  dayPart: DayPart;
   time: LocalTime | null;
-  durationMinutes: number | null;
   completedAt: ISODateTime | null;
 };
 
 export type RoutineStep = {
   id: EntityId;
   name: string;
-  durationMinutes: number | null;
 };
 
 export type Routine = EntityTimestamps & {
@@ -194,13 +188,13 @@ export type TrackyData = {
 
 export type PersistedTrackyState = TrackyData & {
   appearance: AppearanceMode;
-  schemaVersion: 6;
+  schemaVersion: 7;
 };
 
 export type TrackyBackupEnvelope = {
   format: 'tracky-backup';
   formatVersion: 1;
-  dataSchemaVersion: 6;
+  dataSchemaVersion: 7;
   appVersion: string;
   exportedAt: ISODateTime;
   payload: PersistedTrackyState;
@@ -230,7 +224,7 @@ export type TrackerEntryDraft = Pick<
 
 export type TaskDraft = Pick<
   Task,
-  'name' | 'scheduledDate' | 'dayPart' | 'time' | 'durationMinutes'
+  'name' | 'scheduledDate' | 'time'
 >;
 
 export type RoutineDraft = Pick<

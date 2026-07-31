@@ -9,21 +9,15 @@ import type {
   ISOWeekday,
 } from '../src/domain/models';
 import {
-  addMinutesToTime,
   buildDayPlan,
-  dayPlanSections,
   defaultDaySchedule,
   EARLIER_TASK_HORIZON_DAYS,
-  formatTimeRange,
   localDaysBetween,
-  nowLinePlacement,
   partitionDayPlan,
   plannedOrRecordedDateIds,
-  routineStepMinutes,
   scheduleOccursOn,
   unfinishedTasksBefore,
   type DayPlanItem,
-  type DayPlanSection,
 } from '../src/domain/planning';
 
 const timestamp = '2026-07-27T08:00:00.000Z';
@@ -53,9 +47,7 @@ function task(overrides: Partial<Task> = {}): Task {
     id: 'task_lunch',
     name: 'Pack lunch',
     scheduledDate: '2026-07-29',
-    dayPart: 'morning',
     time: '08:00',
-    durationMinutes: 10,
     completedAt: null,
     createdAt: timestamp,
     updatedAt: timestamp,
@@ -71,12 +63,11 @@ function routine(overrides: Partial<Routine> = {}): Routine {
     color: '#FF9F0A',
     schedule: {
       ...defaultDaySchedule('2026-07-27'),
-      dayPart: 'morning',
       time: '07:30',
     },
     steps: [
-      { id: 'step_teeth', name: 'Brush teeth', durationMinutes: 2 },
-      { id: 'step_bag', name: 'Pack bag', durationMinutes: 5 },
+      { id: 'step_teeth', name: 'Brush teeth' },
+      { id: 'step_bag', name: 'Pack bag' },
     ],
     createdAt: timestamp,
     updatedAt: timestamp,
@@ -119,12 +110,7 @@ describe('day schedules', () => {
 
 describe('day plan projection', () => {
   test('projects separate persisted types into one ordered row language', () => {
-    const water = tracker({
-      schedule: {
-        ...defaultDaySchedule('2026-07-27'),
-        dayPart: 'anytime',
-      },
-    });
+    const water = tracker();
     const morning = routine();
     const plan = buildDayPlan({
       date: '2026-07-29',
@@ -158,7 +144,7 @@ describe('day plan projection', () => {
 
   test('uses a routine run snapshot after the template changes', () => {
     const editedRoutine = routine({
-      steps: [{ id: 'step_new', name: 'A new template step', durationMinutes: 1 }],
+      steps: [{ id: 'step_new', name: 'A new template step' }],
     });
     const progress: RoutineProgress = {
       id: 'run_morning_2026-07-29',
@@ -168,13 +154,11 @@ describe('day plan projection', () => {
         {
           id: 'step_teeth',
           name: 'Brush teeth',
-          durationMinutes: 2,
           completedAt: '2026-07-29T05:35:00.000Z',
         },
         {
           id: 'step_bag',
           name: 'Pack bag',
-          durationMinutes: 5,
           completedAt: null,
         },
       ],
@@ -283,9 +267,7 @@ function planItem(overrides: Partial<DayPlanItem> = {}): DayPlanItem {
     id: `task:${overrides.time ?? 'none'}`,
     kind: 'task',
     source: task(),
-    dayPart: 'morning',
     time: null,
-    durationMinutes: null,
     skipped: false,
     complete: false,
     count: 0,
@@ -295,31 +277,11 @@ function planItem(overrides: Partial<DayPlanItem> = {}): DayPlanItem {
   } as DayPlanItem;
 }
 
-function section(part: DayPlanSection['part'], times: (string | null)[]) {
-  return {
-    part,
-    items: times.map((time, index) =>
-      planItem({ dayPart: part, id: `${part}:${index}`, time }),
-    ),
-  };
-}
-
-describe('durations', () => {
-  test('a duration is read as the span it occupies, and wraps past midnight', () => {
-    assert.equal(addMinutesToTime('07:30', 20), '07:50');
-    assert.equal(addMinutesToTime('23:50', 25), '00:15');
-    assert.equal(formatTimeRange('07:30', 20), '07:30–07:50');
-    assert.equal(formatTimeRange('07:30', null), '07:30');
-    assert.equal(formatTimeRange(null, 20), '20m');
-    assert.equal(formatTimeRange(null, null), '');
-  });
-
-  test('a tracker time is a point, not a start and end range', () => {
+describe('times', () => {
+  test('a tracker time remains a single point', () => {
     const scheduled = tracker({
       schedule: {
         ...defaultDaySchedule('2026-07-27'),
-        dayPart: 'morning',
-        durationMinutes: 30,
         time: '09:00',
       },
     });
@@ -332,20 +294,10 @@ describe('durations', () => {
       routineProgress: [],
     });
 
-    assert.equal(item.durationMinutes, null);
     assert.equal(item.detail, '09:00');
   });
 
-  test('a routine takes as long as its steps say it does', () => {
-    assert.equal(routineStepMinutes(routine().steps), 7);
-    assert.equal(
-      routineStepMinutes([{ durationMinutes: null }, { durationMinutes: null }]),
-      null,
-    );
-    assert.equal(routineStepMinutes([]), null);
-  });
-
-  test('a routine without its own duration reports its step total', () => {
+  test('a routine reports its optional time without estimating an end', () => {
     const [item] = buildDayPlan({
       date: '2026-07-29',
       trackers: [],
@@ -355,8 +307,7 @@ describe('durations', () => {
       routineProgress: [],
     });
 
-    assert.equal(item.durationMinutes, 7);
-    assert.equal(item.detail, '0 of 2 steps · 07:30–07:37');
+    assert.equal(item.detail, '0 of 2 steps · 07:30');
   });
 });
 
@@ -380,61 +331,4 @@ describe('the day layout', () => {
     assert.deepEqual(skipped.map((item) => item.id), ['b']);
   });
 
-  test('empty parts of the day are not given headers', () => {
-    const sections = dayPlanSections([
-      planItem({ dayPart: 'evening', id: 'e' }),
-      planItem({ dayPart: 'morning', id: 'm' }),
-    ]);
-
-    assert.deepEqual(sections.map((item) => item.part), ['morning', 'evening']);
-  });
-
-  test('the now line sits before the first thing still ahead of you', () => {
-    const sections = [section('morning', ['08:00', '10:00', null])];
-    const placement = nowLinePlacement(
-      sections,
-      new Date('2026-07-29T09:00:00'),
-    );
-
-    assert.deepEqual(placement, { part: 'morning', index: 1 });
-  });
-
-  test('an empty current part pushes the line to the top of what is next', () => {
-    const sections = [section('evening', ['19:00'])];
-    const placement = nowLinePlacement(
-      sections,
-      new Date('2026-07-29T09:00:00'),
-    );
-
-    assert.deepEqual(placement, { part: 'evening', index: 0 });
-  });
-
-  test('a day entirely behind you puts the line at the very end', () => {
-    const sections = [section('morning', ['08:00', '09:00'])];
-    const placement = nowLinePlacement(
-      sections,
-      new Date('2026-07-29T20:00:00'),
-    );
-
-    assert.deepEqual(placement, { part: 'morning', index: 2 });
-  });
-
-  test('a current part with no times still gets the line', () => {
-    const sections = [section('morning', [null, null])];
-    const placement = nowLinePlacement(
-      sections,
-      new Date('2026-07-29T09:00:00'),
-    );
-
-    assert.deepEqual(placement, { part: 'morning', index: 0 });
-  });
-
-  test('anytime has no position in the day, so it never holds the line', () => {
-    const placement = nowLinePlacement(
-      [section('anytime', [null])],
-      new Date('2026-07-29T09:00:00'),
-    );
-
-    assert.equal(placement, null);
-  });
 });

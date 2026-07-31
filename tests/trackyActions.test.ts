@@ -32,8 +32,6 @@ const changedAt = '2026-07-29T06:00:00.000Z';
 
 function schedule(overrides: Partial<DaySchedule> = {}): DaySchedule {
   return {
-    dayPart: 'anytime',
-    durationMinutes: null,
     exceptions: [],
     recurrence: { frequency: 'daily', interval: 1 },
     startDate: '2026-07-27',
@@ -66,9 +64,7 @@ function taskDraft(overrides: Partial<TaskDraft> = {}): TaskDraft {
   return {
     name: 'Pack lunch',
     scheduledDate: '2026-07-29',
-    dayPart: 'morning',
     time: '08:00',
-    durationMinutes: 10,
     ...overrides,
   };
 }
@@ -89,10 +85,10 @@ function routineDraft(overrides: Partial<RoutineDraft> = {}): RoutineDraft {
     name: 'Morning routine',
     icon: 'star',
     color: '#FF9F0A',
-    schedule: schedule({ dayPart: 'morning', time: '07:30' }),
+    schedule: schedule({ time: '07:30' }),
     steps: [
-      { id: 'step_teeth', name: 'Brush teeth', durationMinutes: 2 },
-      { id: 'step_bag', name: 'Pack bag', durationMinutes: 5 },
+      { id: 'step_teeth', name: 'Brush teeth' },
+      { id: 'step_bag', name: 'Pack bag' },
     ],
     ...overrides,
   };
@@ -137,7 +133,7 @@ function state(
     routines: [],
     routineProgress: [],
     appearance: 'system',
-    schemaVersion: 6,
+    schemaVersion: 7,
     ...overrides,
   };
 }
@@ -310,7 +306,7 @@ describe('routine actions', () => {
       'routine_morning',
       routineDraft({
         steps: [
-          { id: 'step_new', name: 'New template step', durationMinutes: 1 },
+          { id: 'step_new', name: 'New template step' },
         ],
       }),
       { now: '2026-07-29T06:30:00.000Z' },
@@ -351,8 +347,8 @@ describe('routine actions', () => {
     const original = state({ routines: [routine()] });
     const duplicateSteps = routineDraft({
       steps: [
-        { id: 'same', name: 'One', durationMinutes: null },
-        { id: 'same', name: 'Two', durationMinutes: null },
+        { id: 'same', name: 'One' },
+        { id: 'same', name: 'Two' },
       ],
     });
 

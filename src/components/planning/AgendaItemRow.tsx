@@ -21,14 +21,14 @@ import { TrackerProgressRing } from '../tracking/TrackerProgressRing';
 
 type AgendaItem = Extract<DayPlanItem, { kind: 'routine' | 'task' }>;
 
-/** Fixed leading gutter so every row's time reads as one column. */
 const TIME_COLUMN = 42;
 const CHECK_SIZE = 25;
 /**
  * Steps hang under their routine's title rather than under its ring, so the
  * whole block reads as one thing with a heading instead of two lists.
  */
-const STEP_INDENT = TIME_COLUMN + spacing.xs + RING_SIZE.day - CHECK_SIZE;
+const STEP_INDENT =
+  RING_SIZE.day + spacing.xs - CHECK_SIZE - spacing.sm;
 
 function Check({ checked, theme }: { checked: boolean; theme: Theme }) {
   return (
@@ -54,6 +54,7 @@ function Check({ checked, theme }: { checked: boolean; theme: Theme }) {
 }
 
 function Time({ theme, time }: { theme: Theme; time: string | null }) {
+  if (!time) return null;
   return (
     <Text
       style={[
@@ -62,7 +63,7 @@ function Time({ theme, time }: { theme: Theme; time: string | null }) {
         { color: theme.colors.textTertiary },
       ]}
     >
-      {time ?? ''}
+      {time}
     </Text>
   );
 }
@@ -89,24 +90,15 @@ export function AgendaItemRow({
   if (item.kind === 'task') {
     return (
       <Pressable
-        accessibilityHint="Opens task details. Long press for more actions."
+        accessibilityHint="Long press for more actions."
         accessibilityLabel={`${item.source.name}${item.time ? `, ${item.time}` : ''}`}
-        accessibilityRole="button"
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked: item.complete }}
         onLongPress={onLongPress}
-        onPress={onOpen}
+        onPress={onCompleteTask}
         style={({ pressed }) => [styles.row, { opacity: pressed ? 0.58 : 1 }]}
       >
-        <Time theme={theme} time={item.time} />
-        <Pressable
-          accessibilityLabel={`${item.complete ? 'Mark incomplete' : 'Complete'} ${item.source.name}`}
-          accessibilityRole="checkbox"
-          accessibilityState={{ checked: item.complete }}
-          hitSlop={12}
-          onPress={onCompleteTask}
-          style={({ pressed }) => [{ opacity: pressed ? 0.5 : 1 }]}
-        >
-          <Check checked={item.complete} theme={theme} />
-        </Pressable>
+        <Check checked={item.complete} theme={theme} />
         <Text
           numberOfLines={2}
           style={[
@@ -121,6 +113,7 @@ export function AgendaItemRow({
         >
           {item.source.name}
         </Text>
+        <Time theme={theme} time={item.time} />
       </Pressable>
     );
   }
@@ -141,7 +134,6 @@ export function AgendaItemRow({
           { opacity: pressed ? 0.58 : 1 },
         ]}
       >
-        <Time theme={theme} time={item.time} />
         <TrackerProgressRing
           color={resolveHabitColor(item.source.color, theme.dark)}
           count={item.count}
@@ -177,6 +169,7 @@ export function AgendaItemRow({
               : `${item.count} of ${steps.length} ${steps.length === 1 ? 'step' : 'steps'}`}
           </Text>
         </View>
+        <Time theme={theme} time={item.time} />
         {steps.length ? (
           <Pressable
             accessibilityLabel={

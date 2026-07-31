@@ -1,6 +1,6 @@
 import { defaultHabitColor, normalizeHabitColor } from '../design/theme';
 import type { DaySchedule, Tracker, TrackerDraft } from './models';
-import { dayPartForTime, defaultDaySchedule } from './planning';
+import { defaultDaySchedule } from './planning';
 import { localDateKey } from './tracking';
 
 export function simplifiedTrackerSchedule(
@@ -9,8 +9,6 @@ export function simplifiedTrackerSchedule(
 ): DaySchedule {
   return {
     ...schedule,
-    dayPart: time ? dayPartForTime(time) : 'anytime',
-    durationMinutes: null,
     recurrence: { frequency: 'daily', interval: 1 },
     time,
   };

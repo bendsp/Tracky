@@ -108,14 +108,16 @@ export default function EarlierTasksScreen() {
                     <Text style={[typography.headline, { color: theme.colors.text }]}>
                       {task.name}
                     </Text>
-                    <Text
-                      style={[
-                        typography.footnote,
-                        { color: theme.colors.textSecondary },
-                      ]}
-                    >
-                      {task.time ?? dayPartLabel(task.dayPart)}
-                    </Text>
+                    {task.time ? (
+                      <Text
+                        style={[
+                          typography.footnote,
+                          { color: theme.colors.textSecondary },
+                        ]}
+                      >
+                        {task.time}
+                      </Text>
+                    ) : null}
                   </Pressable>
                 </View>
               ))}
@@ -140,10 +142,6 @@ export default function EarlierTasksScreen() {
       </NativeSheetScrollView>
     </NativeSheetScreen>
   );
-}
-
-function dayPartLabel(part: string) {
-  return part.charAt(0).toUpperCase() + part.slice(1);
 }
 
 const styles = StyleSheet.create({

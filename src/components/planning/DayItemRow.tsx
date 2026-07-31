@@ -220,16 +220,6 @@ export function DayItemRow({
             >
               {step.name}
             </Text>
-            {step.durationMinutes ? (
-              <Text
-                style={[
-                  typography.footnote,
-                  { color: theme.colors.textTertiary },
-                ]}
-              >
-                {step.durationMinutes}m
-              </Text>
-            ) : null}
           </Pressable>
         );
       })}

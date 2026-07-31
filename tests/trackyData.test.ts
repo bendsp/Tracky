@@ -58,8 +58,6 @@ const currentState: PersistedTrackyState = {
         startDate: '2026-07-21',
       },
       schedule: {
-        dayPart: 'anytime',
-        durationMinutes: null,
         exceptions: [],
         recurrence: { frequency: 'daily', interval: 1 },
         startDate: '2026-07-21',
@@ -99,9 +97,7 @@ const currentState: PersistedTrackyState = {
       id: 'task_lunch',
       name: 'Pack lunch',
       scheduledDate: '2026-07-22',
-      dayPart: 'morning',
       time: '08:00',
-      durationMinutes: 10,
       completedAt: null,
       createdAt: timestamp,
       updatedAt: timestamp,
@@ -114,8 +110,6 @@ const currentState: PersistedTrackyState = {
       icon: 'star',
       color: '#3578F6',
       schedule: {
-        dayPart: 'morning',
-        durationMinutes: 7,
         exceptions: [{ date: '2026-07-26', behavior: 'skip' }],
         recurrence: {
           frequency: 'weekly',
@@ -126,7 +120,7 @@ const currentState: PersistedTrackyState = {
         time: '07:30',
       },
       // This template has changed since the snapshotted run below.
-      steps: [{ id: 'step_new', name: 'New step', durationMinutes: 1 }],
+      steps: [{ id: 'step_new', name: 'New step' }],
       createdAt: timestamp,
       updatedAt: timestamp,
     },
@@ -140,13 +134,11 @@ const currentState: PersistedTrackyState = {
         {
           id: 'step_teeth',
           name: 'Brush teeth',
-          durationMinutes: 2,
           completedAt: '2026-07-21T06:35:00.000Z',
         },
         {
           id: 'step_bag',
           name: 'Pack bag',
-          durationMinutes: 5,
           completedAt: null,
         },
       ],
@@ -157,7 +149,7 @@ const currentState: PersistedTrackyState = {
     },
   ],
   appearance: 'system',
-  schemaVersion: 6,
+  schemaVersion: 7,
 };
 
 class MemoryStorage implements TrackyStringStorage {
@@ -191,19 +183,19 @@ describe('Tracky backup compatibility', () => {
     assert.equal(parsed.state.routineProgress[0].steps[0].id, 'step_teeth');
     assert.equal(parsed.state.routines[0].steps[0].id, 'step_new');
     assert.equal(backup.formatVersion, 1);
-    assert.equal(backup.dataSchemaVersion, 6);
+    assert.equal(backup.dataSchemaVersion, 7);
     assert.equal(parsed.metadata.appVersion, '0.1.0');
     assert.equal(parsed.metadata.exportedAt, '2026-07-21T12:00:00.000Z');
   });
 
-  test('real schema 2 fixture migrates sequentially to schema 6', () => {
+  test('real schema 2 fixture migrates sequentially to schema 7', () => {
     const fixture = readFileSync(
       new URL('./fixtures/tracky-schema-v2.json', import.meta.url),
       'utf8',
     );
     const parsed = parseAndMigrateTrackyData(fixture);
 
-    assert.equal(parsed.state.schemaVersion, 6);
+    assert.equal(parsed.state.schemaVersion, 7);
     assert.deepEqual(parsed.state.trackers[0].goal, {
       targetCount: 1,
       period: 'day',
@@ -211,8 +203,6 @@ describe('Tracky backup compatibility', () => {
     });
     assert.equal(parsed.state.trackers[0].fields[0].type, 'number');
     assert.deepEqual(parsed.state.trackers[0].schedule, {
-      dayPart: 'anytime',
-      durationMinutes: null,
       exceptions: [],
       recurrence: { frequency: 'daily', interval: 1 },
       startDate: '2026-07-20',
@@ -239,14 +229,12 @@ describe('Tracky backup compatibility', () => {
     );
     const parsed = parseAndMigrateTrackyData(fixture);
 
-    assert.equal(parsed.state.schemaVersion, 6);
+    assert.equal(parsed.state.schemaVersion, 7);
     assert.equal(
       parsed.state.events[0].forDate,
       localDateForInstant(parsed.state.events[0].occurredAt),
     );
     assert.deepEqual(parsed.state.trackers[0].schedule, {
-      dayPart: 'anytime',
-      durationMinutes: null,
       exceptions: [],
       recurrence: { frequency: 'daily', interval: 1 },
       startDate: '2026-07-21',
@@ -257,7 +245,69 @@ describe('Tracky backup compatibility', () => {
     assert.deepEqual(parsed.state.routineProgress, []);
   });
 
-  test('schema 3 data migrates through schema 6 with a daily goal and schedule', () => {
+  test('schema 6 migration discards day parts and duration estimates', () => {
+    const legacy = {
+      ...currentState,
+      schemaVersion: 6,
+      trackers: currentState.trackers.map((tracker) => ({
+        ...tracker,
+        schedule: {
+          ...tracker.schedule,
+          dayPart: 'anytime',
+          durationMinutes: 30,
+        },
+      })),
+      tasks: currentState.tasks.map((task) => ({
+        ...task,
+        dayPart: 'morning',
+        durationMinutes: 10,
+      })),
+      routines: currentState.routines.map((routine) => ({
+        ...routine,
+        schedule: {
+          ...routine.schedule,
+          dayPart: 'morning',
+          durationMinutes: 20,
+        },
+        steps: routine.steps.map((step) => ({ ...step, durationMinutes: 5 })),
+      })),
+      routineProgress: currentState.routineProgress.map((progress) => ({
+        ...progress,
+        steps: progress.steps.map((step) => ({ ...step, durationMinutes: 5 })),
+      })),
+    };
+
+    const migrated = parseAndMigrateTrackyData(legacy).state;
+    assert.deepEqual(migrated, currentState);
+    assert.equal(migrated.schemaVersion, 7);
+    assert.equal('dayPart' in migrated.trackers[0].schedule, false);
+    assert.equal('durationMinutes' in migrated.trackers[0].schedule, false);
+    assert.equal('dayPart' in migrated.tasks[0], false);
+    assert.equal('durationMinutes' in migrated.tasks[0], false);
+    assert.equal('durationMinutes' in migrated.routines[0].steps[0], false);
+    assert.equal(
+      'durationMinutes' in migrated.routineProgress[0].steps[0],
+      false,
+    );
+
+    const envelope = {
+      format: 'tracky-backup',
+      formatVersion: 1,
+      dataSchemaVersion: 6,
+      appVersion: '1.0.1',
+      exportedAt: '2026-07-21T12:00:00.000Z',
+      payload: legacy,
+    };
+    const imported = parseAndMigrateTrackyData(envelope);
+    assert.deepEqual(imported.state, currentState);
+    assert.equal(imported.metadata.appVersion, '1.0.1');
+    assert.equal(
+      imported.metadata.exportedAt,
+      '2026-07-21T12:00:00.000Z',
+    );
+  });
+
+  test('schema 3 data migrates through schema 7 with a daily goal and schedule', () => {
     const schemaFive = JSON.parse(
       readFileSync(
         new URL('./fixtures/tracky-schema-v5.json', import.meta.url),
@@ -271,7 +321,7 @@ describe('Tracky backup compatibility', () => {
     };
     const parsed = parseAndMigrateTrackyData(schemaThree);
 
-    assert.equal(parsed.state.schemaVersion, 6);
+    assert.equal(parsed.state.schemaVersion, 7);
     assert.deepEqual(parsed.state.trackers, currentState.trackers);
   });
 
@@ -300,7 +350,7 @@ describe('Tracky backup compatibility', () => {
     delete fixture.exportedAt;
 
     const parsed = parseAndMigrateTrackyData(fixture);
-    assert.equal(parsed.state.schemaVersion, 6);
+    assert.equal(parsed.state.schemaVersion, 7);
     assert.equal(parsed.state.events.length, 1);
   });
 
@@ -528,7 +578,7 @@ describe('Tracky backup compatibility', () => {
     );
   });
 
-  test('schema 6 requires explicit effective dates and all new collections', () => {
+  test('schema 7 requires explicit effective dates and all planning collections', () => {
     assert.throws(
       () =>
         parseAndMigrateTrackyData({
@@ -552,7 +602,6 @@ describe('Tracky backup compatibility', () => {
     const valid = currentState.trackers[0].schedule;
     const invalidSchedules = [
       { ...valid, time: '24:00' },
-      { ...valid, durationMinutes: 0 },
       { ...valid, recurrence: { frequency: 'daily', interval: 0 } },
       {
         ...valid,
@@ -583,12 +632,10 @@ describe('Tracky backup compatibility', () => {
     }
   });
 
-  test('invalid task placement and duration are rejected', () => {
+  test('invalid task dates and times are rejected', () => {
     for (const task of [
       { ...currentState.tasks[0], scheduledDate: '2026-02-30' },
       { ...currentState.tasks[0], time: '08:60' },
-      { ...currentState.tasks[0], durationMinutes: -1 },
-      { ...currentState.tasks[0], dayPart: 'overnight' },
     ]) {
       assert.throws(
         () => parseAndMigrateTrackyData({ ...currentState, tasks: [task] }),
