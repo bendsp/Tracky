@@ -4,6 +4,7 @@ import { StyleSheet, Text } from 'react-native';
 import { NativeSheetScreen } from '../src/components/NativeSheetScreen';
 import { TrackerEditorForm } from '../src/components/tracking/TrackerEditorSheet';
 import { spacing, type as typography } from '../src/design/theme';
+import { requestPlanningNotificationPermission } from '../src/notifications/PlanningNotificationRuntime';
 import { useTrackerEditorSession } from '../src/store/TrackerEditorSession';
 import { useTracky } from '../src/store/TrackyProvider';
 import { successHaptic, tapHaptic } from '../src/utils/haptics';
@@ -38,8 +39,11 @@ export default function TrackerEditorScreen() {
     );
   }
 
-  const save = () => {
+  const save = async () => {
     if (!session.draft.name.trim()) return;
+    if (session.draft.schedule.time) {
+      await requestPlanningNotificationPermission();
+    }
     if (session.trackerId) {
       updateTracker(session.trackerId, session.draft);
     } else {

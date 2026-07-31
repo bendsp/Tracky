@@ -31,6 +31,7 @@ import {
   type as typography,
 } from '../src/design/theme';
 import type { TrackedEvent } from '../src/domain/models';
+import { isLocalDate, localDateAtEnd } from '../src/domain/planning';
 import {
   currentGoalStreak,
   goalStreakDescription,
@@ -43,12 +44,12 @@ import { useTrackerEditorSession } from '../src/store/TrackerEditorSession';
 import { useTracky } from '../src/store/TrackyProvider';
 import { successHaptic, tapHaptic } from '../src/utils/haptics';
 
-function eventDay(iso: string) {
+function eventDay(date: string) {
   return new Intl.DateTimeFormat(undefined, {
     day: 'numeric',
     month: 'long',
     weekday: 'long',
-  }).format(new Date(iso));
+  }).format(new Date(`${date}T12:00:00`));
 }
 
 function eventTime(iso: string) {
@@ -70,12 +71,19 @@ function weekdayInitials() {
 }
 
 export default function TrackerDetailSheet() {
-  const { trackerId } = useLocalSearchParams<{ trackerId?: string }>();
+  const { date, trackerId } = useLocalSearchParams<{
+    date?: string;
+    trackerId?: string;
+  }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   useTimeframeNow();
   const trackerEditor = useTrackerEditorSession();
   const now = new Date();
+  const selectedDate = isLocalDate(date)
+    ? date
+    : localDateKey(now);
+  const statusDate = localDateAtEnd(selectedDate);
   const { events, theme, toggleTrackerCheckIn, trackers } = useTracky();
   const tracker = trackers.find((candidate) => candidate.id === trackerId);
   const trackerEvents = useMemo(
@@ -109,16 +117,16 @@ export default function TrackerDetailSheet() {
     );
   }
 
-  const goalStatus = trackerGoalStatus(tracker, trackerEvents, now);
+  const goalStatus = trackerGoalStatus(tracker, trackerEvents, statusDate);
   const completedGoal = goalStatus.complete;
   const daysWithEntries = new Set(
-    trackerEvents.map((event) => localDateKey(new Date(event.occurredAt))),
+    trackerEvents.map((event) => event.forDate),
   );
   const streak = currentGoalStreak(tracker, trackerEvents, now);
   const footerInset = Math.max(insets.bottom, spacing.md);
 
   const toggleCompletion = () => {
-    const result = toggleTrackerCheckIn(tracker.id);
+    const result = toggleTrackerCheckIn(tracker.id, selectedDate);
     if (result === 'completed') successHaptic();
     else if (result === 'uncompleted' || result === 'logged') tapHaptic();
   };
@@ -256,7 +264,7 @@ export default function TrackerDetailSheet() {
                         { color: theme.colors.text },
                       ]}
                     >
-                      {eventDay(event.occurredAt)}
+                      {eventDay(event.forDate)}
                     </Text>
                     <Text
                       numberOfLines={1}

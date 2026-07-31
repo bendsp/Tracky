@@ -1,0 +1,464 @@
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+
+import { ChoiceChip, Field } from '../src/components/Form';
+import {
+  NativeSheetScreen,
+  NativeSheetScrollView,
+} from '../src/components/NativeSheetScreen';
+import {
+  NativeDatePicker,
+  NativeTimePicker,
+} from '../src/components/NativeControls';
+import { SectionHeader } from '../src/components/Screen';
+import {
+  radius,
+  spacing,
+  type as typography,
+} from '../src/design/theme';
+import type { DayPart, TaskDraft } from '../src/domain/models';
+import {
+  dayPartForTime,
+  dayPartLabels,
+  isLocalDate,
+  localDateAtNoon,
+} from '../src/domain/planning';
+import { newTrackerDraft } from '../src/domain/trackerDraft';
+import { localDateKey } from '../src/domain/tracking';
+import { requestPlanningNotificationPermission } from '../src/notifications/PlanningNotificationRuntime';
+import { useTracky } from '../src/store/TrackyProvider';
+import { successHaptic, tapHaptic } from '../src/utils/haptics';
+
+const durations = [null, 5, 10, 15, 20, 30, 45, 60] as const;
+
+function timeDate(value: string | null) {
+  const date = new Date();
+  const [hour, minute] = (value ?? '09:00').split(':').map(Number);
+  date.setHours(hour, minute, 0, 0);
+  return date;
+}
+
+function timeKey(value: Date) {
+  return `${String(value.getHours()).padStart(2, '0')}:${String(
+    value.getMinutes(),
+  ).padStart(2, '0')}`;
+}
+
+export default function TaskEditorScreen() {
+  const { date, taskId } = useLocalSearchParams<{
+    date?: string;
+    taskId?: string;
+  }>();
+  const router = useRouter();
+  const {
+    createTask,
+    createTracker,
+    deleteTask,
+    routines,
+    tasks,
+    theme,
+    updateRoutine,
+    updateTask,
+  } = useTracky();
+  const existing = tasks.find((task) => task.id === taskId) ?? null;
+  const initial = useMemo<TaskDraft>(
+    () =>
+      existing
+        ? {
+            name: existing.name,
+            scheduledDate: existing.scheduledDate,
+            dayPart: existing.dayPart,
+            time: existing.time,
+            durationMinutes: existing.durationMinutes,
+          }
+        : {
+            name: '',
+            scheduledDate: isLocalDate(date) ? date : localDateKey(new Date()),
+            dayPart: 'anytime',
+            time: null,
+            durationMinutes: null,
+          },
+    [date, existing],
+  );
+  const [draft, setDraft] = useState(initial);
+  const cleanName = draft.name.trim();
+
+  const save = async () => {
+    if (!draft.name.trim()) return;
+    if (draft.time) await requestPlanningNotificationPermission();
+    if (existing) updateTask(existing.id, draft);
+    else createTask(draft);
+    successHaptic();
+    router.back();
+  };
+
+  const convertToTracker = () => {
+    if (!cleanName) return;
+    Alert.alert(
+      'Make this repeat?',
+      'This task will become a daily tracker. You can adjust its goal and schedule afterward.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Make recurring',
+          onPress: () => {
+            const trackerDraft = newTrackerDraft();
+            const trackerId = createTracker({
+              ...trackerDraft,
+              name: cleanName,
+              goal: {
+                ...trackerDraft.goal,
+                startDate: draft.scheduledDate,
+              },
+              schedule: {
+                ...trackerDraft.schedule,
+                dayPart: draft.dayPart,
+                durationMinutes: draft.durationMinutes,
+                startDate: draft.scheduledDate,
+                time: draft.time,
+              },
+            });
+            if (!trackerId) return;
+            if (existing) deleteTask(existing.id);
+            successHaptic();
+            router.replace({
+              pathname: '/tracker-detail',
+              params: { trackerId },
+            });
+          },
+        },
+      ],
+    );
+  };
+
+  const moveIntoRoutine = () => {
+    if (!cleanName) return;
+    const createNew = {
+      text: 'New routine…',
+      onPress: () =>
+        router.push({
+          pathname: '/routine-editor',
+          params: existing
+            ? { taskId: existing.id, taskName: cleanName }
+            : { taskName: cleanName },
+        }),
+    };
+    Alert.alert(
+      'Move into a routine',
+      routines.length
+        ? 'Choose where this should become a step.'
+        : 'Create a routine with this as its first step.',
+      [
+        ...routines.slice(0, 5).map((routine) => ({
+          text: routine.name,
+          onPress: () => {
+            updateRoutine(routine.id, {
+              name: routine.name,
+              icon: routine.icon,
+              color: routine.color,
+              schedule: routine.schedule,
+              steps: [
+                ...routine.steps,
+                {
+                  id: `routine_step_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+                  name: cleanName,
+                  durationMinutes: draft.durationMinutes,
+                },
+              ],
+            });
+            if (existing) deleteTask(existing.id);
+            successHaptic();
+            router.back();
+          },
+        })),
+        createNew,
+        { text: 'Cancel', style: 'cancel' },
+      ],
+    );
+  };
+
+  return (
+    <NativeSheetScreen>
+      <Stack.Screen options={{ title: existing ? 'Edit Task' : 'New Task' }} />
+      <Stack.Toolbar placement="left">
+        <Stack.Toolbar.Button onPress={() => router.back()} separateBackground>
+          Cancel
+        </Stack.Toolbar.Button>
+      </Stack.Toolbar>
+      <Stack.Toolbar placement="right">
+        <Stack.Toolbar.Button
+          disabled={!draft.name.trim()}
+          onPress={save}
+          separateBackground
+        >
+          {existing ? 'Save' : 'Add'}
+        </Stack.Toolbar.Button>
+      </Stack.Toolbar>
+
+      <NativeSheetScrollView
+        automaticallyAdjustKeyboardInsets
+        contentContainerStyle={styles.form}
+      >
+        <Field
+          label="Task"
+          onChangeText={(name) => setDraft((current) => ({ ...current, name }))}
+          onSubmitEditing={save}
+          pill
+          placeholder="Pack lunch"
+          returnKeyType="done"
+          value={draft.name}
+        />
+
+        <View>
+          <SectionHeader>Date</SectionHeader>
+          <View
+            style={[
+              styles.controlCard,
+              {
+                backgroundColor: theme.colors.groupedSurface,
+                borderColor: theme.colors.border,
+              },
+            ]}
+          >
+            <Text style={[typography.body, { color: theme.colors.text }]}>Scheduled</Text>
+            <NativeDatePicker
+              compact
+              label="Task date"
+              onChange={(value) =>
+                setDraft((current) => ({
+                  ...current,
+                  scheduledDate: localDateKey(value),
+                }))
+              }
+              value={localDateAtNoon(draft.scheduledDate)}
+            />
+          </View>
+        </View>
+
+        <View>
+          <SectionHeader>Part of day</SectionHeader>
+          <View style={styles.chips}>
+            {(Object.keys(dayPartLabels) as DayPart[]).map((part) => (
+              <ChoiceChip
+                key={part}
+                label={dayPartLabels[part]}
+                onPress={() =>
+                  setDraft((current) => ({ ...current, dayPart: part }))
+                }
+                selected={draft.dayPart === part}
+              />
+            ))}
+          </View>
+        </View>
+
+        <View>
+          <SectionHeader>Start time</SectionHeader>
+          <View
+            style={[
+              styles.controlCard,
+              {
+                backgroundColor: theme.colors.groupedSurface,
+                borderColor: theme.colors.border,
+              },
+            ]}
+          >
+            {draft.time ? (
+              <>
+                <NativeTimePicker
+                  label="Task start time"
+                  onChange={(value) => {
+                    const time = timeKey(value);
+                    setDraft((current) => ({
+                      ...current,
+                      time,
+                      dayPart: dayPartForTime(time),
+                    }));
+                  }}
+                  value={timeDate(draft.time)}
+                />
+                <TextButton
+                  label="Remove"
+                  onPress={() =>
+                    setDraft((current) => ({ ...current, time: null }))
+                  }
+                />
+              </>
+            ) : (
+              <>
+                <Text style={[typography.body, { color: theme.colors.textSecondary }]}>No exact time</Text>
+                <TextButton
+                  label="Add time"
+                  onPress={() =>
+                    setDraft((current) => ({
+                      ...current,
+                      time: '09:00',
+                      dayPart: 'morning',
+                    }))
+                  }
+                />
+              </>
+            )}
+          </View>
+        </View>
+
+        <View>
+          <SectionHeader>Estimated duration</SectionHeader>
+          <View style={styles.chips}>
+            {durations.map((duration) => (
+              <ChoiceChip
+                key={duration ?? 'none'}
+                label={duration ? `${duration} min` : 'None'}
+                onPress={() =>
+                  setDraft((current) => ({
+                    ...current,
+                    durationMinutes: duration,
+                  }))
+                }
+                selected={draft.durationMinutes === duration}
+              />
+            ))}
+          </View>
+        </View>
+
+        <View>
+          <SectionHeader>Turn this into more</SectionHeader>
+          <View
+            style={[
+              styles.actionCard,
+              {
+                backgroundColor: theme.colors.groupedSurface,
+                borderColor: theme.colors.border,
+              },
+            ]}
+          >
+            <ActionRow
+              disabled={!cleanName}
+              label="Make recurring"
+              onPress={convertToTracker}
+              theme={theme}
+            />
+            <ActionRow
+              divided
+              disabled={!cleanName}
+              label="Move into a routine"
+              onPress={moveIntoRoutine}
+              theme={theme}
+            />
+          </View>
+        </View>
+
+        {existing ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => {
+              tapHaptic();
+              Alert.alert('Delete task?', existing.name, [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Delete',
+                  style: 'destructive',
+                  onPress: () => {
+                    deleteTask(existing.id);
+                    router.back();
+                  },
+                },
+              ]);
+            }}
+            style={({ pressed }) => [
+              styles.delete,
+              {
+                backgroundColor: theme.colors.dangerSoft,
+                opacity: pressed ? 0.6 : 1,
+              },
+            ]}
+          >
+            <Text style={[typography.headline, { color: theme.colors.danger }]}>Delete Task</Text>
+          </Pressable>
+        ) : null}
+      </NativeSheetScrollView>
+    </NativeSheetScreen>
+  );
+}
+
+function TextButton({ label, onPress }: { label: string; onPress: () => void }) {
+  const { theme } = useTracky();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => ({ opacity: pressed ? 0.55 : 1 })}
+    >
+      <Text style={[typography.headline, { color: theme.colors.accent }]}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function ActionRow({
+  divided = false,
+  disabled = false,
+  label,
+  onPress,
+  theme,
+}: {
+  divided?: boolean;
+  disabled?: boolean;
+  label: string;
+  onPress: () => void;
+  theme: ReturnType<typeof useTracky>['theme'];
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.actionRow,
+        divided && {
+          borderTopColor: theme.colors.separator,
+          borderTopWidth: StyleSheet.hairlineWidth,
+        },
+        { opacity: disabled ? 0.34 : pressed ? 0.58 : 1 },
+      ]}
+    >
+      <Text style={[typography.body, { color: theme.colors.text }]}>{label}</Text>
+      <Text style={[typography.headline, { color: theme.colors.textTertiary }]}>›</Text>
+    </Pressable>
+  );
+}
+
+const styles = StyleSheet.create({
+  actionCard: {
+    borderCurve: 'continuous',
+    borderRadius: radius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: 'hidden',
+  },
+  actionRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    minHeight: 54,
+    paddingHorizontal: spacing.md,
+  },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  controlCard: {
+    alignItems: 'center',
+    borderCurve: 'continuous',
+    borderRadius: radius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    minHeight: 58,
+    paddingHorizontal: spacing.md,
+  },
+  delete: {
+    alignItems: 'center',
+    borderCurve: 'continuous',
+    borderRadius: radius.md,
+    justifyContent: 'center',
+    minHeight: 52,
+  },
+  form: { gap: spacing.sm, paddingTop: spacing.lg },
+});

@@ -54,6 +54,7 @@ export default function TrackerStartDateScreen() {
             updateDraft((current) => ({
               ...current,
               goal: { ...current.goal, startDate: pendingDate },
+              schedule: { ...current.schedule, startDate: pendingDate },
             }));
             tapHaptic();
             router.back();

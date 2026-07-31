@@ -22,7 +22,8 @@
     "plugins": [
       "expo-router",
       "expo-sharing",
-      "expo-font"
+      "expo-font",
+      "expo-notifications"
     ]
   }
 }

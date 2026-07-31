@@ -126,6 +126,7 @@ export function TrackerEntryForm({
     );
     onSubmit({
       occurredAt: occurredAt.toISOString(),
+      forDate: localDateKey(occurredAt),
       values: parsedValues,
       note: note.trim() || null,
     });

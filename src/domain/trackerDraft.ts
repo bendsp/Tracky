@@ -1,5 +1,6 @@
 import { defaultHabitColor, normalizeHabitColor } from '../design/theme';
 import type { Tracker, TrackerDraft } from './models';
+import { defaultDaySchedule } from './planning';
 import { localDateKey } from './tracking';
 
 export function baseTrackerSummary(): TrackerDraft['summary'] {
@@ -11,6 +12,7 @@ export function baseTrackerSummary(): TrackerDraft['summary'] {
 }
 
 export function newTrackerDraft(): TrackerDraft {
+  const startDate = localDateKey(new Date());
   return {
     name: '',
     icon: 'star',
@@ -18,8 +20,9 @@ export function newTrackerDraft(): TrackerDraft {
     goal: {
       targetCount: 1,
       period: 'day',
-      startDate: localDateKey(new Date()),
+      startDate,
     },
+    schedule: defaultDaySchedule(startDate),
     fields: [],
     summary: baseTrackerSummary(),
   };
@@ -31,6 +34,18 @@ export function editableTrackerDraft(tracker: Tracker): TrackerDraft {
     icon: tracker.icon,
     color: normalizeHabitColor(tracker.color),
     goal: { ...tracker.goal },
+    schedule: {
+      ...tracker.schedule,
+      exceptions: tracker.schedule.exceptions.map((exception) => ({
+        ...exception,
+      })),
+      recurrence: tracker.schedule.recurrence.frequency === 'weekly'
+        ? {
+            ...tracker.schedule.recurrence,
+            weekdays: [...tracker.schedule.recurrence.weekdays],
+          }
+        : { ...tracker.schedule.recurrence },
+    },
     fields: tracker.fields.map((field) =>
       field.type === 'choice'
         ? { ...field, choices: [...field.choices] }

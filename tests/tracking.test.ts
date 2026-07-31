@@ -8,6 +8,7 @@ import {
   trackerGoalStatus,
 } from '../src/domain/tracking';
 import type { TrackedEvent, Tracker } from '../src/domain/models';
+import { defaultDaySchedule } from '../src/domain/planning';
 
 function dateKey(year: number, month: number, day: number) {
   return localDateKey(new Date(year, month - 1, day, 12));
@@ -49,6 +50,7 @@ function tracker(
     icon: 'activity',
     color: '#FFFFFF',
     goal: { period, startDate, targetCount },
+    schedule: defaultDaySchedule(startDate),
     fields: [],
     summary: {
       calculation: 'count',
@@ -61,10 +63,12 @@ function tracker(
 }
 
 function event(id: string, occurredAt: string): TrackedEvent {
+  const instant = new Date(occurredAt);
   return {
     id,
     trackerId: 'tracker',
     occurredAt,
+    forDate: localDateKey(instant),
     values: {},
     note: null,
     createdAt: occurredAt,

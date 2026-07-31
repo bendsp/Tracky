@@ -16,6 +16,14 @@ import { TrackyPersistenceQueue } from '../src/storage/TrackyPersistenceQueue';
 
 const timestamp = '2026-07-21T10:00:00.000Z';
 
+function localDateForInstant(value: string) {
+  const date = new Date(value);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 const currentState: PersistedTrackyState = {
   activityTypes: [
     {
@@ -49,6 +57,14 @@ const currentState: PersistedTrackyState = {
         period: 'day',
         startDate: '2026-07-21',
       },
+      schedule: {
+        dayPart: 'anytime',
+        durationMinutes: null,
+        exceptions: [],
+        recurrence: { frequency: 'daily', interval: 1 },
+        startDate: '2026-07-21',
+        time: null,
+      },
       fields: [
         {
           id: 'field_amount',
@@ -71,14 +87,77 @@ const currentState: PersistedTrackyState = {
       id: 'event_water',
       trackerId: 'tracker_water',
       occurredAt: '2026-07-21T10:30:00.000Z',
+      forDate: '2026-07-21',
       values: { field_amount: 500 },
       note: null,
       createdAt: timestamp,
       updatedAt: timestamp,
     },
   ],
+  tasks: [
+    {
+      id: 'task_lunch',
+      name: 'Pack lunch',
+      scheduledDate: '2026-07-22',
+      dayPart: 'morning',
+      time: '08:00',
+      durationMinutes: 10,
+      completedAt: null,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    },
+  ],
+  routines: [
+    {
+      id: 'routine_morning',
+      name: 'Morning routine',
+      icon: 'star',
+      color: '#3578F6',
+      schedule: {
+        dayPart: 'morning',
+        durationMinutes: 7,
+        exceptions: [{ date: '2026-07-26', behavior: 'skip' }],
+        recurrence: {
+          frequency: 'weekly',
+          interval: 1,
+          weekdays: [1, 2, 3, 4, 5],
+        },
+        startDate: '2026-07-21',
+        time: '07:30',
+      },
+      // This template has changed since the snapshotted run below.
+      steps: [{ id: 'step_new', name: 'New step', durationMinutes: 1 }],
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    },
+  ],
+  routineProgress: [
+    {
+      id: 'run_morning_2026-07-21',
+      routineId: 'routine_morning',
+      forDate: '2026-07-21',
+      steps: [
+        {
+          id: 'step_teeth',
+          name: 'Brush teeth',
+          durationMinutes: 2,
+          completedAt: '2026-07-21T06:35:00.000Z',
+        },
+        {
+          id: 'step_bag',
+          name: 'Pack bag',
+          durationMinutes: 5,
+          completedAt: null,
+        },
+      ],
+      startedAt: '2026-07-21T06:33:00.000Z',
+      completedAt: null,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    },
+  ],
   appearance: 'system',
-  schemaVersion: 5,
+  schemaVersion: 6,
 };
 
 class MemoryStorage implements TrackyStringStorage {
@@ -109,40 +188,90 @@ describe('Tracky backup compatibility', () => {
     const parsed = parseAndMigrateTrackyData(JSON.stringify(backup));
 
     assert.deepEqual(parsed.state, currentState);
+    assert.equal(parsed.state.routineProgress[0].steps[0].id, 'step_teeth');
+    assert.equal(parsed.state.routines[0].steps[0].id, 'step_new');
+    assert.equal(backup.formatVersion, 1);
+    assert.equal(backup.dataSchemaVersion, 6);
     assert.equal(parsed.metadata.appVersion, '0.1.0');
     assert.equal(parsed.metadata.exportedAt, '2026-07-21T12:00:00.000Z');
   });
 
-  test('real schema 2 fixture migrates sequentially to schema 5', () => {
+  test('real schema 2 fixture migrates sequentially to schema 6', () => {
     const fixture = readFileSync(
       new URL('./fixtures/tracky-schema-v2.json', import.meta.url),
       'utf8',
     );
     const parsed = parseAndMigrateTrackyData(fixture);
 
-    assert.equal(parsed.state.schemaVersion, 5);
+    assert.equal(parsed.state.schemaVersion, 6);
     assert.deepEqual(parsed.state.trackers[0].goal, {
       targetCount: 1,
       period: 'day',
       startDate: '2026-07-20',
     });
     assert.equal(parsed.state.trackers[0].fields[0].type, 'number');
+    assert.deepEqual(parsed.state.trackers[0].schedule, {
+      dayPart: 'anytime',
+      durationMinutes: null,
+      exceptions: [],
+      recurrence: { frequency: 'daily', interval: 1 },
+      startDate: '2026-07-20',
+      time: null,
+    });
+    assert.equal(
+      parsed.state.events[0].forDate,
+      localDateForInstant(parsed.state.events[0].occurredAt),
+    );
     assert.equal(parsed.state.events[0].values.field_migrated_tracker_legacy_water, 500);
     assert.equal(
       parsed.state.activities[0].activityTypeId,
       'activity_type_migrated_activity_legacy_work',
     );
+    assert.deepEqual(parsed.state.tasks, []);
+    assert.deepEqual(parsed.state.routines, []);
+    assert.deepEqual(parsed.state.routineProgress, []);
   });
 
-  test('schema 3 data migrates through schema 5 with a daily goal', () => {
+  test('schema 5 fixture adds stable effective dates and default schedules', () => {
+    const fixture = readFileSync(
+      new URL('./fixtures/tracky-schema-v5.json', import.meta.url),
+      'utf8',
+    );
+    const parsed = parseAndMigrateTrackyData(fixture);
+
+    assert.equal(parsed.state.schemaVersion, 6);
+    assert.equal(
+      parsed.state.events[0].forDate,
+      localDateForInstant(parsed.state.events[0].occurredAt),
+    );
+    assert.deepEqual(parsed.state.trackers[0].schedule, {
+      dayPart: 'anytime',
+      durationMinutes: null,
+      exceptions: [],
+      recurrence: { frequency: 'daily', interval: 1 },
+      startDate: '2026-07-21',
+      time: null,
+    });
+    assert.deepEqual(parsed.state.tasks, []);
+    assert.deepEqual(parsed.state.routines, []);
+    assert.deepEqual(parsed.state.routineProgress, []);
+  });
+
+  test('schema 3 data migrates through schema 6 with a daily goal and schedule', () => {
+    const schemaFive = JSON.parse(
+      readFileSync(
+        new URL('./fixtures/tracky-schema-v5.json', import.meta.url),
+        'utf8',
+      ),
+    ) as Record<string, unknown> & { trackers: Record<string, unknown>[] };
     const schemaThree = {
-      ...currentState,
-      trackers: currentState.trackers.map(({ goal: _goal, ...tracker }) => tracker),
+      ...schemaFive,
+      trackers: schemaFive.trackers.map(({ goal: _goal, ...tracker }) => tracker),
       schemaVersion: 3,
     };
     const parsed = parseAndMigrateTrackyData(schemaThree);
 
-    assert.equal(parsed.state.schemaVersion, 5);
+    assert.equal(parsed.state.schemaVersion, 6);
     assert.deepEqual(parsed.state.trackers, currentState.trackers);
   });
 
@@ -171,7 +300,7 @@ describe('Tracky backup compatibility', () => {
     delete fixture.exportedAt;
 
     const parsed = parseAndMigrateTrackyData(fixture);
-    assert.equal(parsed.state.schemaVersion, 5);
+    assert.equal(parsed.state.schemaVersion, 6);
     assert.equal(parsed.state.events.length, 1);
   });
 
@@ -392,6 +521,135 @@ describe('Tracky backup compatibility', () => {
             {
               ...stateWithDateField.events[0],
               values: { field_date: '2026-02-30' },
+            },
+          ],
+        }),
+      TrackyDataError,
+    );
+  });
+
+  test('schema 6 requires explicit effective dates and all new collections', () => {
+    assert.throws(
+      () =>
+        parseAndMigrateTrackyData({
+          ...currentState,
+          events: currentState.events.map(({ forDate: _forDate, ...event }) =>
+            event,
+          ),
+        }),
+      TrackyDataError,
+    );
+
+    for (const missing of ['tasks', 'routines', 'routineProgress'] as const) {
+      assert.throws(
+        () => parseAndMigrateTrackyData({ ...currentState, [missing]: undefined }),
+        TrackyDataError,
+      );
+    }
+  });
+
+  test('invalid tracker schedules are rejected', () => {
+    const valid = currentState.trackers[0].schedule;
+    const invalidSchedules = [
+      { ...valid, time: '24:00' },
+      { ...valid, durationMinutes: 0 },
+      { ...valid, recurrence: { frequency: 'daily', interval: 0 } },
+      {
+        ...valid,
+        recurrence: { frequency: 'weekly', interval: 1, weekdays: [] },
+      },
+      {
+        ...valid,
+        recurrence: { frequency: 'weekly', interval: 1, weekdays: [1, 1] },
+      },
+      {
+        ...valid,
+        exceptions: [
+          { date: '2026-07-23', behavior: 'skip' },
+          { date: '2026-07-23', behavior: 'include' },
+        ],
+      },
+    ];
+
+    for (const schedule of invalidSchedules) {
+      assert.throws(
+        () =>
+          parseAndMigrateTrackyData({
+            ...currentState,
+            trackers: [{ ...currentState.trackers[0], schedule }],
+          }),
+        TrackyDataError,
+      );
+    }
+  });
+
+  test('invalid task placement and duration are rejected', () => {
+    for (const task of [
+      { ...currentState.tasks[0], scheduledDate: '2026-02-30' },
+      { ...currentState.tasks[0], time: '08:60' },
+      { ...currentState.tasks[0], durationMinutes: -1 },
+      { ...currentState.tasks[0], dayPart: 'overnight' },
+    ]) {
+      assert.throws(
+        () => parseAndMigrateTrackyData({ ...currentState, tasks: [task] }),
+        TrackyDataError,
+      );
+    }
+  });
+
+  test('routine runs are unique per date and retain self-contained snapshots', () => {
+    assert.deepEqual(
+      parseAndMigrateTrackyData(currentState).state.routineProgress[0].steps,
+      currentState.routineProgress[0].steps,
+    );
+
+    assert.throws(
+      () =>
+        parseAndMigrateTrackyData({
+          ...currentState,
+          routines: [{ ...currentState.routines[0], steps: [] }],
+        }),
+      TrackyDataError,
+    );
+    assert.throws(
+      () =>
+        parseAndMigrateTrackyData({
+          ...currentState,
+          routineProgress: [
+            { ...currentState.routineProgress[0], steps: [] },
+          ],
+        }),
+      TrackyDataError,
+    );
+    assert.throws(
+      () =>
+        parseAndMigrateTrackyData({
+          ...currentState,
+          routineProgress: [
+            ...currentState.routineProgress,
+            { ...currentState.routineProgress[0], id: 'duplicate_run' },
+          ],
+        }),
+      TrackyDataError,
+    );
+    assert.throws(
+      () =>
+        parseAndMigrateTrackyData({
+          ...currentState,
+          routineProgress: [
+            { ...currentState.routineProgress[0], routineId: 'missing_routine' },
+          ],
+        }),
+      TrackyDataError,
+    );
+    assert.throws(
+      () =>
+        parseAndMigrateTrackyData({
+          ...currentState,
+          routineProgress: [
+            {
+              ...currentState.routineProgress[0],
+              completedAt: '2026-07-21T06:40:00.000Z',
             },
           ],
         }),

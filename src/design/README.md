@@ -147,6 +147,7 @@ the same shape, not merely similar ones.
 
 | | ring | stroke | icon | visible gap |
 | --- | --- | --- | --- | --- |
+| `RING_SIZE.day` | 48 | 3.6 | 24 | 4.4 |
 | `RING_SIZE.row` | 64 | 4.8 | 32 | 5.8 |
 | `RING_SIZE.hero` | 132 | 9.9 | 66 | 11.9 |
 

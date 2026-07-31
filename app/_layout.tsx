@@ -11,6 +11,7 @@ import {
   type as typography,
 } from '../src/design/theme';
 import { nativeSheetOptions } from '../src/navigation/screenOptions';
+import { PlanningNotifications } from '../src/notifications/PlanningNotificationRuntime';
 import {
   OnboardingProvider,
   useOnboarding,
@@ -88,6 +89,7 @@ function RootNavigator() {
   return (
     <>
       <StatusBar style={theme.dark ? 'light' : 'dark'} />
+      <PlanningNotifications />
       <Stack
         screenOptions={{
           contentStyle: { backgroundColor: theme.colors.background },
@@ -114,6 +116,13 @@ function RootNavigator() {
         <Stack.Screen
           name="tracker-start-date"
           options={formSheetOptions}
+        />
+        <Stack.Screen name="task-editor" options={formSheetOptions} />
+        <Stack.Screen name="earlier-tasks" options={formSheetOptions} />
+        <Stack.Screen name="routine-editor" options={formSheetOptions} />
+        <Stack.Screen
+          name="routine-runner"
+          options={{ headerShown: true, presentation: 'card' }}
         />
         <Stack.Screen name="onboarding" options={formSheetOptions} />
       </Stack>

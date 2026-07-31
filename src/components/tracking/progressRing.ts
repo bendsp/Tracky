@@ -28,8 +28,9 @@ export function ringIconSize(size: number) {
 }
 
 /**
- * The two sizes Tracky draws a tracker ring at. The ring is the primary read on
- * both screens, so it's sized as large as its container allows.
+ * The sizes Tracky draws a tracker ring at. The ring is the primary read on
+ * each screen, so every call site uses one of these named sizes rather than a
+ * hand-tuned number.
  */
 export const RING_SIZE = {
   /**
@@ -38,6 +39,8 @@ export const RING_SIZE = {
    * into the ~188pt the tracker name has to work with.
    */
   row: 64,
+  /** Compact rows in the selected-day plan. */
+  day: 48,
   /** The tracker detail hero, which has room to spare. */
   hero: 132,
 } as const;

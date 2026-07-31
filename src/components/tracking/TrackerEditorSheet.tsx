@@ -36,6 +36,7 @@ import {
   NativeMenuPicker,
 } from '../NativeControls';
 import { SectionHeader } from '../Screen';
+import { ScheduleEditor } from '../planning/ScheduleEditor';
 import { selectionTile } from './selectionTile';
 import { TrackerIcon } from './TrackerIcon';
 
@@ -335,6 +336,13 @@ export function TrackerEditorForm({
             </Pressable>
           </View>
         </View>
+
+        <ScheduleEditor
+          onChange={(schedule) =>
+            onDraftChange((current) => ({ ...current, schedule }))
+          }
+          schedule={draft.schedule}
+        />
     </NativeSheetScrollView>
   );
 }

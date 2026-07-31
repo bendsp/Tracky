@@ -3,6 +3,7 @@ import type { AppearanceMode } from '../design/theme';
 export type EntityId = string;
 export type ISODateTime = string;
 export type LocalDate = string;
+export type LocalTime = string;
 export type HexColor = `#${string}`;
 
 export type EntityTimestamps = {
@@ -90,12 +91,43 @@ export type TrackerGoal = {
   startDate: LocalDate;
 };
 
+export type DayPart = 'morning' | 'afternoon' | 'evening' | 'anytime';
+export type ISOWeekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+
+export type ScheduleRecurrence =
+  | { frequency: 'daily'; interval: number }
+  | {
+      frequency: 'weekly';
+      interval: number;
+      weekdays: ISOWeekday[];
+    };
+
+export type ScheduleException = {
+  date: LocalDate;
+  behavior: 'include' | 'skip';
+};
+
+/**
+ * When a standing item belongs in the day. This is intentionally separate
+ * from a tracker's goal: "three times a week" describes progress, while this
+ * schedule describes which days should offer the action.
+ */
+export type DaySchedule = {
+  dayPart: DayPart;
+  durationMinutes: number | null;
+  exceptions: ScheduleException[];
+  recurrence: ScheduleRecurrence;
+  startDate: LocalDate;
+  time: LocalTime | null;
+};
+
 export type Tracker = EntityTimestamps & {
   id: EntityId;
   name: string;
   icon: TrackerIconName;
   color: HexColor;
   goal: TrackerGoal;
+  schedule: DaySchedule;
   fields: TrackerField[];
   summary: TrackerSummary;
 };
@@ -106,8 +138,48 @@ export type TrackedEvent = EntityTimestamps & {
   id: EntityId;
   trackerId: EntityId;
   occurredAt: ISODateTime;
+  forDate: LocalDate;
   values: Record<EntityId, TrackerEntryValue>;
   note: string | null;
+};
+
+export type Task = EntityTimestamps & {
+  id: EntityId;
+  name: string;
+  scheduledDate: LocalDate;
+  dayPart: DayPart;
+  time: LocalTime | null;
+  durationMinutes: number | null;
+  completedAt: ISODateTime | null;
+};
+
+export type RoutineStep = {
+  id: EntityId;
+  name: string;
+  durationMinutes: number | null;
+};
+
+export type Routine = EntityTimestamps & {
+  id: EntityId;
+  name: string;
+  icon: TrackerIconName;
+  color: HexColor;
+  schedule: DaySchedule;
+  steps: RoutineStep[];
+};
+
+export type RoutineRunStep = RoutineStep & {
+  completedAt: ISODateTime | null;
+};
+
+export type RoutineProgress = EntityTimestamps & {
+  id: EntityId;
+  routineId: EntityId;
+  forDate: LocalDate;
+  /** Snapshot the run so later template edits do not rewrite its history. */
+  steps: RoutineRunStep[];
+  startedAt: ISODateTime | null;
+  completedAt: ISODateTime | null;
 };
 
 export type TrackyData = {
@@ -115,17 +187,20 @@ export type TrackyData = {
   activities: ActivityBlock[];
   trackers: Tracker[];
   events: TrackedEvent[];
+  tasks: Task[];
+  routines: Routine[];
+  routineProgress: RoutineProgress[];
 };
 
 export type PersistedTrackyState = TrackyData & {
   appearance: AppearanceMode;
-  schemaVersion: 5;
+  schemaVersion: 6;
 };
 
 export type TrackyBackupEnvelope = {
   format: 'tracky-backup';
   formatVersion: 1;
-  dataSchemaVersion: 5;
+  dataSchemaVersion: 6;
   appVersion: string;
   exportedAt: ISODateTime;
   payload: PersistedTrackyState;
@@ -145,10 +220,20 @@ export type TrackyBackupPreview = {
 
 export type TrackerDraft = Pick<
   Tracker,
-  'name' | 'icon' | 'color' | 'goal' | 'fields' | 'summary'
+  'name' | 'icon' | 'color' | 'goal' | 'schedule' | 'fields' | 'summary'
 >;
 
 export type TrackerEntryDraft = Pick<
   TrackedEvent,
-  'occurredAt' | 'values' | 'note'
+  'occurredAt' | 'forDate' | 'values' | 'note'
+>;
+
+export type TaskDraft = Pick<
+  Task,
+  'name' | 'scheduledDate' | 'dayPart' | 'time' | 'durationMinutes'
+>;
+
+export type RoutineDraft = Pick<
+  Routine,
+  'name' | 'icon' | 'color' | 'schedule' | 'steps'
 >;

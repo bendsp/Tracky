@@ -82,16 +82,12 @@ export function eventsForGoal(
   const activeStart = new Date(
     Math.max(naturalStart.getTime(), goalStart.getTime()),
   );
-  const end = now.getTime();
+  const activeStartKey = localDateKey(activeStart);
+  const endKey = localDateKey(now);
 
-  return events.filter((event) => {
-    const occurredAt = new Date(event.occurredAt).getTime();
-    return (
-      Number.isFinite(occurredAt) &&
-      occurredAt >= activeStart.getTime() &&
-      occurredAt <= end
-    );
-  });
+  return events.filter(
+    (event) => event.forDate >= activeStartKey && event.forDate <= endKey,
+  );
 }
 
 export function trackerGoalStatus(
@@ -134,16 +130,18 @@ export function currentGoalStreak(
 
   const countInPeriod = (start: Date) => {
     const next = moveGoalPeriod(tracker.goal.period, start, 1);
-    const effectiveStart = Math.max(start.getTime(), goalStart.getTime());
-    return trackerEvents.filter((event) => {
-      const occurredAt = new Date(event.occurredAt).getTime();
-      return (
-        Number.isFinite(occurredAt) &&
-        occurredAt >= effectiveStart &&
-        occurredAt < next.getTime() &&
-        occurredAt <= now.getTime()
-      );
-    }).length;
+    const effectiveStart = new Date(
+      Math.max(start.getTime(), goalStart.getTime()),
+    );
+    const startKey = localDateKey(effectiveStart);
+    const nextKey = localDateKey(next);
+    const nowKey = localDateKey(now);
+    return trackerEvents.filter(
+      (event) =>
+        event.forDate >= startKey &&
+        event.forDate < nextKey &&
+        event.forDate <= nowKey,
+    ).length;
   };
 
   if (countInPeriod(periodStart) < tracker.goal.targetCount) {
@@ -174,11 +172,11 @@ export function eventsInTimeframe(
   timeframe: TrackerSummaryTimeframe,
   now = new Date(),
 ) {
-  const start = startFor(timeframe, now).getTime();
-  return events.filter((event) => {
-    const occurredAt = new Date(event.occurredAt).getTime();
-    return Number.isFinite(occurredAt) && occurredAt >= start && occurredAt <= now.getTime();
-  });
+  const start = localDateKey(startFor(timeframe, now));
+  const end = localDateKey(now);
+  return events.filter(
+    (event) => event.forDate >= start && event.forDate <= end,
+  );
 }
 
 function formatNumber(value: number) {
@@ -300,9 +298,7 @@ export function groupEventsByDate(events: TrackedEvent[]) {
     (left, right) =>
       new Date(right.occurredAt).getTime() - new Date(left.occurredAt).getTime(),
   )) {
-    const date = new Date(event.occurredAt);
-    if (!Number.isFinite(date.getTime())) continue;
-    const key = localDateKey(date);
+    const key = event.forDate;
     const group = groups.get(key) ?? [];
     group.push(event);
     groups.set(key, group);

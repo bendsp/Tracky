@@ -1,0 +1,64 @@
+{
+  "activityTypes": [
+    {
+      "id": "activity_type_work",
+      "name": "Work",
+      "color": "#3578F6",
+      "createdAt": "2026-07-21T10:00:00.000Z",
+      "updatedAt": "2026-07-21T10:00:00.000Z"
+    }
+  ],
+  "activities": [
+    {
+      "id": "activity_work",
+      "activityTypeId": "activity_type_work",
+      "name": "Work",
+      "color": "#3578F6",
+      "startedAt": "2026-07-21T10:00:00.000Z",
+      "endedAt": "2026-07-21T11:00:00.000Z",
+      "createdAt": "2026-07-21T10:00:00.000Z",
+      "updatedAt": "2026-07-21T10:00:00.000Z"
+    }
+  ],
+  "trackers": [
+    {
+      "id": "tracker_water",
+      "name": "Water",
+      "icon": "droplet",
+      "color": "#3578F6",
+      "goal": {
+        "targetCount": 1,
+        "period": "day",
+        "startDate": "2026-07-21"
+      },
+      "fields": [
+        {
+          "id": "field_amount",
+          "name": "Amount",
+          "type": "number",
+          "unit": "ml"
+        }
+      ],
+      "summary": {
+        "calculation": "sum",
+        "timeframe": "today",
+        "fieldId": "field_amount"
+      },
+      "createdAt": "2026-07-21T10:00:00.000Z",
+      "updatedAt": "2026-07-21T10:00:00.000Z"
+    }
+  ],
+  "events": [
+    {
+      "id": "event_water",
+      "trackerId": "tracker_water",
+      "occurredAt": "2026-07-21T10:30:00.000Z",
+      "values": { "field_amount": 500 },
+      "note": null,
+      "createdAt": "2026-07-21T10:00:00.000Z",
+      "updatedAt": "2026-07-21T10:00:00.000Z"
+    }
+  ],
+  "appearance": "system",
+  "schemaVersion": 5
+}

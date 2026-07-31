@@ -9,12 +9,13 @@ import {
   ringStrokeWidth,
 } from '../src/components/tracking/progressRing';
 
-/** The two sizes the app actually renders. */
+/** The sizes the app actually renders. */
 const ROW = { size: RING_SIZE.row };
+const DAY = { size: RING_SIZE.day };
 const HERO = { size: RING_SIZE.hero };
 
 test('the icon clears the ring stroke at every size', () => {
-  for (const { size } of [ROW, HERO]) {
+  for (const { size } of [DAY, ROW, HERO]) {
     // Inner clear diameter, i.e. what's left inside the stroke on both sides.
     const clear = size - 2 * ringStrokeWidth(size);
     assert.ok(

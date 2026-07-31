@@ -3,8 +3,18 @@ import {
   trackerIconNames,
   type ActivityBlock,
   type ActivityType,
+  type DayPart,
+  type DaySchedule,
   type HexColor,
+  type ISOWeekday,
   type PersistedTrackyState,
+  type Routine,
+  type RoutineDraft,
+  type RoutineProgress,
+  type RoutineRunStep,
+  type RoutineStep,
+  type Task,
+  type TaskDraft,
   type TrackedEvent,
   type Tracker,
   type TrackerDraft,
@@ -17,8 +27,11 @@ import {
   type TrackyBackupPreview,
 } from '../domain/models';
 
-export const CURRENT_DATA_SCHEMA_VERSION = 5;
+export const CURRENT_DATA_SCHEMA_VERSION = 6;
 export const TRACKY_BACKUP_FORMAT_VERSION = 1;
+
+const MAX_DURATION_MINUTES = 24 * 60;
+const MAX_RECURRENCE_INTERVAL = 365;
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -88,6 +101,40 @@ function isLocalDate(value: unknown): value is string {
     Number.isFinite(date.getTime()) &&
     date.toISOString().slice(0, 10) === value
   );
+}
+
+function isLocalTime(value: unknown): value is string {
+  if (!isString(value) || !/^\d{2}:\d{2}$/.test(value)) return false;
+  const [hour, minute] = value.split(':').map(Number);
+  return hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59;
+}
+
+function isDayPart(value: unknown): value is DayPart {
+  return (
+    value === 'morning' ||
+    value === 'afternoon' ||
+    value === 'evening' ||
+    value === 'anytime'
+  );
+}
+
+function isDurationMinutes(value: unknown): value is number | null {
+  return (
+    value === null ||
+    (typeof value === 'number' &&
+      Number.isInteger(value) &&
+      value >= 1 &&
+      value <= MAX_DURATION_MINUTES)
+  );
+}
+
+function localDateFromInstant(value: string) {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) malformed();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 export function isHexColor(value: unknown): value is HexColor {
@@ -204,6 +251,85 @@ function readGoal(value: unknown): TrackerGoal | null {
   };
 }
 
+function readSchedule(value: unknown): DaySchedule | null {
+  if (
+    !isRecord(value) ||
+    !isDayPart(value.dayPart) ||
+    !isDurationMinutes(value.durationMinutes) ||
+    !Array.isArray(value.exceptions) ||
+    !isRecord(value.recurrence) ||
+    !isLocalDate(value.startDate) ||
+    !(value.time === null || isLocalTime(value.time))
+  ) {
+    return null;
+  }
+
+  const interval = value.recurrence.interval;
+  if (
+    typeof interval !== 'number' ||
+    !Number.isInteger(interval) ||
+    interval < 1 ||
+    interval > MAX_RECURRENCE_INTERVAL
+  ) {
+    return null;
+  }
+
+  let recurrence: DaySchedule['recurrence'];
+  if (value.recurrence.frequency === 'daily') {
+    recurrence = { frequency: 'daily', interval };
+  } else if (value.recurrence.frequency === 'weekly') {
+    if (
+      !Array.isArray(value.recurrence.weekdays) ||
+      value.recurrence.weekdays.length === 0 ||
+      !value.recurrence.weekdays.every(
+        (weekday) =>
+          typeof weekday === 'number' &&
+          Number.isInteger(weekday) &&
+          weekday >= 1 &&
+          weekday <= 7,
+      ) ||
+      new Set(value.recurrence.weekdays).size !==
+        value.recurrence.weekdays.length
+    ) {
+      return null;
+    }
+    recurrence = {
+      frequency: 'weekly',
+      interval,
+      weekdays: [...value.recurrence.weekdays] as ISOWeekday[],
+    };
+  } else {
+    return null;
+  }
+
+  const exceptions = value.exceptions.map((exception) => {
+    if (
+      !isRecord(exception) ||
+      !isLocalDate(exception.date) ||
+      (exception.behavior !== 'include' && exception.behavior !== 'skip')
+    ) {
+      return null;
+    }
+    return { date: exception.date, behavior: exception.behavior };
+  });
+  if (
+    exceptions.some((exception) => !exception) ||
+    new Set(exceptions.map((exception) => exception?.date)).size !==
+      exceptions.length
+  ) {
+    return null;
+  }
+
+  return {
+    dayPart: value.dayPart,
+    durationMinutes: value.durationMinutes,
+    exceptions: exceptions as DaySchedule['exceptions'],
+    recurrence,
+    startDate: value.startDate,
+    time: value.time,
+  };
+}
+
 function readTracker(value: unknown): Tracker | null {
   if (
     !isRecord(value) ||
@@ -227,7 +353,8 @@ function readTracker(value: unknown): Tracker | null {
 
   const summary = readSummary(value.summary, validFields);
   const goal = readGoal(value.goal);
-  if (!summary || !goal) return null;
+  const schedule = readSchedule(value.schedule);
+  if (!summary || !goal || !schedule) return null;
 
   return {
     id: value.id,
@@ -235,6 +362,7 @@ function readTracker(value: unknown): Tracker | null {
     icon: value.icon,
     color: value.color,
     goal,
+    schedule,
     fields: validFields,
     summary,
     createdAt: value.createdAt,
@@ -265,6 +393,7 @@ function readEvent(
     !isNonEmptyString(value.id) ||
     !isNonEmptyString(value.trackerId) ||
     !isFiniteDate(value.occurredAt) ||
+    !isLocalDate(value.forDate) ||
     !isRecord(value.values) ||
     !(value.note === null || isString(value.note)) ||
     !isFiniteDate(value.createdAt) ||
@@ -295,8 +424,150 @@ function readEvent(
     id: value.id,
     trackerId: value.trackerId,
     occurredAt: value.occurredAt,
+    forDate: value.forDate,
     values,
     note: value.note?.trim() || null,
+    createdAt: value.createdAt,
+    updatedAt: value.updatedAt,
+  };
+}
+
+function readTask(value: unknown): Task | null {
+  if (
+    !isRecord(value) ||
+    !isNonEmptyString(value.id) ||
+    !isNonEmptyString(value.name) ||
+    !isLocalDate(value.scheduledDate) ||
+    !isDayPart(value.dayPart) ||
+    !(value.time === null || isLocalTime(value.time)) ||
+    !isDurationMinutes(value.durationMinutes) ||
+    !(value.completedAt === null || isFiniteDate(value.completedAt)) ||
+    !isFiniteDate(value.createdAt) ||
+    !isFiniteDate(value.updatedAt)
+  ) {
+    return null;
+  }
+
+  return {
+    id: value.id,
+    name: value.name.trim(),
+    scheduledDate: value.scheduledDate,
+    dayPart: value.dayPart,
+    time: value.time,
+    durationMinutes: value.durationMinutes,
+    completedAt: value.completedAt,
+    createdAt: value.createdAt,
+    updatedAt: value.updatedAt,
+  };
+}
+
+function readRoutineStep(value: unknown): RoutineStep | null {
+  if (
+    !isRecord(value) ||
+    !isNonEmptyString(value.id) ||
+    !isNonEmptyString(value.name) ||
+    !isDurationMinutes(value.durationMinutes)
+  ) {
+    return null;
+  }
+  return {
+    id: value.id,
+    name: value.name.trim(),
+    durationMinutes: value.durationMinutes,
+  };
+}
+
+function readRoutineRunStep(value: unknown): RoutineRunStep | null {
+  const step = readRoutineStep(value);
+  if (
+    !step ||
+    !isRecord(value) ||
+    !(value.completedAt === null || isFiniteDate(value.completedAt))
+  ) {
+    return null;
+  }
+  return { ...step, completedAt: value.completedAt };
+}
+
+function readRoutine(value: unknown): Routine | null {
+  if (
+    !isRecord(value) ||
+    !isNonEmptyString(value.id) ||
+    !isNonEmptyString(value.name) ||
+    !isTrackerIcon(value.icon) ||
+    !isHexColor(value.color) ||
+    !Array.isArray(value.steps) ||
+    value.steps.length === 0 ||
+    !isFiniteDate(value.createdAt) ||
+    !isFiniteDate(value.updatedAt)
+  ) {
+    return null;
+  }
+  const schedule = readSchedule(value.schedule);
+  const steps = value.steps.map(readRoutineStep);
+  if (
+    !schedule ||
+    steps.some((step) => !step) ||
+    new Set(steps.map((step) => step?.id)).size !== steps.length
+  ) {
+    return null;
+  }
+  return {
+    id: value.id,
+    name: value.name.trim(),
+    icon: value.icon,
+    color: value.color,
+    schedule,
+    steps: steps as RoutineStep[],
+    createdAt: value.createdAt,
+    updatedAt: value.updatedAt,
+  };
+}
+
+function readRoutineProgress(
+  value: unknown,
+  routinesById: Map<string, Routine>,
+): RoutineProgress | null {
+  if (
+    !isRecord(value) ||
+    !isNonEmptyString(value.id) ||
+    !isNonEmptyString(value.routineId) ||
+    !routinesById.has(value.routineId) ||
+    !isLocalDate(value.forDate) ||
+    !Array.isArray(value.steps) ||
+    value.steps.length === 0 ||
+    !(value.startedAt === null || isFiniteDate(value.startedAt)) ||
+    !(value.completedAt === null || isFiniteDate(value.completedAt)) ||
+    !isFiniteDate(value.createdAt) ||
+    !isFiniteDate(value.updatedAt)
+  ) {
+    return null;
+  }
+  const steps = value.steps.map(readRoutineRunStep);
+  if (
+    steps.some((step) => !step) ||
+    new Set(steps.map((step) => step?.id)).size !== steps.length
+  ) {
+    return null;
+  }
+  const validSteps = steps as RoutineRunStep[];
+  const hasCompletedStep = validSteps.some((step) => step.completedAt !== null);
+  const allStepsComplete =
+    validSteps.length > 0 &&
+    validSteps.every((step) => step.completedAt !== null);
+  if (
+    (hasCompletedStep && value.startedAt === null) ||
+    (value.completedAt !== null) !== allStepsComplete
+  ) {
+    return null;
+  }
+  return {
+    id: value.id,
+    routineId: value.routineId,
+    forDate: value.forDate,
+    steps: validSteps,
+    startedAt: value.startedAt,
+    completedAt: value.completedAt,
     createdAt: value.createdAt,
     updatedAt: value.updatedAt,
   };
@@ -372,6 +643,9 @@ function validateCurrentState(value: unknown): PersistedTrackyState {
     !Array.isArray(value.activities) ||
     !Array.isArray(value.trackers) ||
     !Array.isArray(value.events) ||
+    !Array.isArray(value.tasks) ||
+    !Array.isArray(value.routines) ||
+    !Array.isArray(value.routineProgress) ||
     !isAppearanceMode(value.appearance)
   ) {
     malformed();
@@ -420,11 +694,40 @@ function validateCurrentState(value: unknown): PersistedTrackyState {
   const validEvents = events as TrackedEvent[];
   if (!hasUniqueIds(validEvents)) malformed('Entry IDs are invalid');
 
+  const tasks = value.tasks.map(readTask);
+  if (tasks.some((item) => !item)) malformed();
+  const validTasks = tasks as Task[];
+  if (!hasUniqueIds(validTasks)) malformed('Task IDs are invalid');
+
+  const routines = value.routines.map(readRoutine);
+  if (routines.some((item) => !item)) malformed();
+  const validRoutines = routines as Routine[];
+  if (!hasUniqueIds(validRoutines)) malformed('Routine IDs are invalid');
+  const routinesById = new Map(validRoutines.map((item) => [item.id, item]));
+
+  const routineProgress = value.routineProgress.map((item) =>
+    readRoutineProgress(item, routinesById),
+  );
+  if (routineProgress.some((item) => !item)) malformed();
+  const validRoutineProgress = routineProgress as RoutineProgress[];
+  if (!hasUniqueIds(validRoutineProgress)) {
+    malformed('Routine progress IDs are invalid');
+  }
+  const routineDateKeys = validRoutineProgress.map(
+    (item) => `${item.routineId}\u0000${item.forDate}`,
+  );
+  if (new Set(routineDateKeys).size !== routineDateKeys.length) {
+    malformed('A routine has more than one run for the same date');
+  }
+
   return {
     activityTypes: validActivityTypes,
     activities: validActivities,
     trackers: validTrackers,
     events: validEvents,
+    tasks: validTasks,
+    routines: validRoutines,
+    routineProgress: validRoutineProgress,
     appearance: value.appearance,
     schemaVersion: CURRENT_DATA_SCHEMA_VERSION,
   };
@@ -503,7 +806,7 @@ function migrateVersionTwoToThree(candidate: UnknownRecord): UnknownRecord {
   const legacyEvents = candidate.events.filter(isRecord);
   if (legacyEvents.length !== candidate.events.length) malformed();
 
-  const trackers: Omit<Tracker, 'goal'>[] = [];
+  const trackers: Omit<Tracker, 'goal' | 'schedule'>[] = [];
   const numberFields = new Map<string, string>();
 
   for (const raw of candidate.trackers) {
@@ -553,7 +856,7 @@ function migrateVersionTwoToThree(candidate: UnknownRecord): UnknownRecord {
   }
 
   const trackerIds = new Set(trackers.map((tracker) => tracker.id));
-  const events: TrackedEvent[] = [];
+  const events: Omit<TrackedEvent, 'forDate'>[] = [];
 
   for (const raw of legacyEvents) {
     if (
@@ -620,6 +923,54 @@ function migrateVersionFourToFive(candidate: UnknownRecord): UnknownRecord {
   return { ...candidate, trackers, schemaVersion: 5 };
 }
 
+function migrateVersionFiveToSix(candidate: UnknownRecord): UnknownRecord {
+  if (!Array.isArray(candidate.trackers) || !Array.isArray(candidate.events)) {
+    malformed();
+  }
+
+  const trackers = candidate.trackers.map((tracker) => {
+    if (
+      !isRecord(tracker) ||
+      !isRecord(tracker.goal) ||
+      !isLocalDate(tracker.goal.startDate)
+    ) {
+      malformed();
+    }
+    return {
+      ...tracker,
+      schedule: {
+        dayPart: 'anytime',
+        durationMinutes: null,
+        exceptions: [],
+        recurrence: { frequency: 'daily', interval: 1 },
+        startDate: tracker.goal.startDate,
+        time: null,
+      },
+    };
+  });
+
+  const events = candidate.events.map((event) => {
+    if (!isRecord(event) || !isFiniteDate(event.occurredAt)) malformed();
+    return {
+      ...event,
+      // v5 stored only a UTC instant, not the device's original calendar
+      // date. Preserve the day the pre-v6 UI would show in the timezone where
+      // this migration runs; after v6 the explicit value is stable on travel.
+      forDate: localDateFromInstant(event.occurredAt),
+    };
+  });
+
+  return {
+    ...candidate,
+    trackers,
+    events,
+    tasks: [],
+    routines: [],
+    routineProgress: [],
+    schemaVersion: 6,
+  };
+}
+
 const migrations: Record<
   number,
   (candidate: UnknownRecord) => UnknownRecord
@@ -628,6 +979,7 @@ const migrations: Record<
   2: migrateVersionTwoToThree,
   3: migrateVersionThreeToFour,
   4: migrateVersionFourToFive,
+  5: migrateVersionFiveToSix,
 };
 
 function readSchemaVersion(candidate: UnknownRecord) {
@@ -760,14 +1112,60 @@ export function sanitizeTrackerDraft(draft: TrackerDraft): TrackerDraft | null {
   }
   const summary = readSummary(draft.summary, validFields);
   const goal = readGoal(draft.goal);
-  if (!summary || !goal) return null;
+  const schedule = readSchedule(draft.schedule);
+  if (!summary || !goal || !schedule) return null;
   return {
     name,
     icon: draft.icon,
     color: draft.color,
     goal,
+    schedule,
     fields: validFields,
     summary,
+  };
+}
+
+export function sanitizeTaskDraft(draft: TaskDraft): TaskDraft | null {
+  const name = draft.name.trim();
+  if (
+    !name ||
+    !isLocalDate(draft.scheduledDate) ||
+    !isDayPart(draft.dayPart) ||
+    !(draft.time === null || isLocalTime(draft.time)) ||
+    !isDurationMinutes(draft.durationMinutes)
+  ) {
+    return null;
+  }
+  return {
+    name,
+    scheduledDate: draft.scheduledDate,
+    dayPart: draft.dayPart,
+    time: draft.time,
+    durationMinutes: draft.durationMinutes,
+  };
+}
+
+export function sanitizeRoutineDraft(draft: RoutineDraft): RoutineDraft | null {
+  const name = draft.name.trim();
+  const schedule = readSchedule(draft.schedule);
+  const steps = draft.steps.map(readRoutineStep);
+  if (
+    !name ||
+    !isTrackerIcon(draft.icon) ||
+    !isHexColor(draft.color) ||
+    !schedule ||
+    draft.steps.length === 0 ||
+    steps.some((step) => !step) ||
+    new Set(steps.map((step) => step?.id)).size !== steps.length
+  ) {
+    return null;
+  }
+  return {
+    name,
+    icon: draft.icon,
+    color: draft.color,
+    schedule,
+    steps: steps as RoutineStep[],
   };
 }
 
@@ -795,7 +1193,11 @@ export function createTrackyBackupPreview(
       activity.startedAt,
       ...(activity.endedAt ? [activity.endedAt] : []),
     ]),
-    ...parsed.state.events.map((event) => event.occurredAt),
+    ...parsed.state.events.map((event) => `${event.forDate}T12:00:00`),
+    ...parsed.state.tasks.map((task) => `${task.scheduledDate}T12:00:00`),
+    ...parsed.state.routineProgress.map(
+      (progress) => `${progress.forDate}T12:00:00`,
+    ),
   ]
     .map((value) => new Date(value).getTime())
     .filter(Number.isFinite)
