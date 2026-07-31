@@ -22,11 +22,9 @@ import {
   type as typography,
 } from '../../design/theme';
 import type {
-  DaySchedule,
   TrackerDraft,
   TrackerGoalPeriod,
 } from '../../domain/models';
-import { localTimeOf } from '../../domain/planning';
 import { simplifiedTrackerSchedule } from '../../domain/trackerDraft';
 import {
   goalPeriodLabels,
@@ -38,11 +36,8 @@ import { Field } from '../Form';
 import { GlassButton } from '../GlassButton';
 import { Icon } from '../Icon';
 import { NativeSheetScrollView } from '../NativeSheetScreen';
-import {
-  NativeMenuPicker,
-  NativeTimePicker,
-  NativeToggle,
-} from '../NativeControls';
+import { NativeMenuPicker } from '../NativeControls';
+import { OptionalTimeEditor } from '../planning/OptionalTimeEditor';
 import { SectionHeader } from '../Screen';
 import { selectionTile } from './selectionTile';
 import { TrackerIcon } from './TrackerIcon';
@@ -344,73 +339,17 @@ export function TrackerEditorForm({
           </View>
         </View>
 
-        <View>
-          <SectionHeader>Time</SectionHeader>
-          <View
-            style={[
-              styles.timeCard,
-              {
-                backgroundColor: theme.colors.groupedSurface,
-                borderColor: theme.colors.border,
-              },
-            ]}
-          >
-            <View style={styles.timeToggleRow}>
-              <Text style={[typography.body, { color: theme.colors.text }]}>Time</Text>
-              <NativeToggle
-                label="Set a time"
-                onChange={(enabled) => {
-                  selectionHaptic();
-                  onDraftChange((current) => ({
-                    ...current,
-                    schedule: simplifiedTrackerSchedule(
-                      current.schedule,
-                      enabled ? current.schedule.time ?? '09:00' : null,
-                    ),
-                  }));
-                }}
-                value={draft.schedule.time !== null}
-              />
-            </View>
-            {draft.schedule.time ? (
-              <>
-                <View
-                  style={[
-                    styles.timeDivider,
-                    { backgroundColor: theme.colors.separator },
-                  ]}
-                />
-                <View style={styles.timePickerRow}>
-                  <Text style={[typography.body, { color: theme.colors.text }]}>At</Text>
-                  <NativeTimePicker
-                    compact
-                    label="Time"
-                    onChange={(date) => {
-                      const time = localTimeOf(date);
-                      onDraftChange((current) => ({
-                        ...current,
-                        schedule: simplifiedTrackerSchedule(
-                          current.schedule,
-                          time,
-                        ),
-                      }));
-                    }}
-                    value={timeDate(draft.schedule.time)}
-                  />
-                </View>
-              </>
-            ) : null}
-          </View>
-        </View>
+        <OptionalTimeEditor
+          onChange={(time) =>
+            onDraftChange((current) => ({
+              ...current,
+              schedule: simplifiedTrackerSchedule(current.schedule, time),
+            }))
+          }
+          time={draft.schedule.time}
+        />
     </NativeSheetScrollView>
   );
-}
-
-function timeDate(value: DaySchedule['time']) {
-  const date = new Date();
-  const [hour, minute] = (value ?? '09:00').split(':').map(Number);
-  date.setHours(hour, minute, 0, 0);
-  return date;
 }
 
 function formattedStartDate(value: string) {
@@ -455,28 +394,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   targetRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    height: 56,
-    justifyContent: 'space-between',
-  },
-  timeCard: {
-    borderCurve: 'continuous',
-    borderRadius: radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: spacing.md,
-  },
-  timeDivider: {
-    height: StyleSheet.hairlineWidth,
-    marginLeft: spacing.xs,
-  },
-  timePickerRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    height: 56,
-    justifyContent: 'space-between',
-  },
-  timeToggleRow: {
     alignItems: 'center',
     flexDirection: 'row',
     height: 56,

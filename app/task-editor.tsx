@@ -10,9 +10,9 @@ import {
 import {
   NativeActionMenu,
   NativeDatePicker,
-  NativeTimePicker,
   type NativeMenuAction,
 } from '../src/components/NativeControls';
+import { OptionalTimeEditor } from '../src/components/planning/OptionalTimeEditor';
 import { SectionHeader } from '../src/components/Screen';
 import {
   radius,
@@ -29,19 +29,6 @@ import { localDateKey } from '../src/domain/tracking';
 import { requestPlanningNotificationPermission } from '../src/notifications/PlanningNotificationRuntime';
 import { useTracky } from '../src/store/TrackyProvider';
 import { successHaptic, tapHaptic } from '../src/utils/haptics';
-
-function timeDate(value: string | null) {
-  const date = new Date();
-  const [hour, minute] = (value ?? '09:00').split(':').map(Number);
-  date.setHours(hour, minute, 0, 0);
-  return date;
-}
-
-function timeKey(value: Date) {
-  return `${String(value.getHours()).padStart(2, '0')}:${String(
-    value.getMinutes(),
-  ).padStart(2, '0')}`;
-}
 
 export default function TaskEditorScreen() {
   const { date, taskId } = useLocalSearchParams<{
@@ -230,52 +217,12 @@ export default function TaskEditorScreen() {
           </View>
         </View>
 
-        <View>
-          <SectionHeader>Time</SectionHeader>
-          <View
-            style={[
-              styles.controlCard,
-              {
-                backgroundColor: theme.colors.groupedSurface,
-                borderColor: theme.colors.border,
-              },
-            ]}
-          >
-            {draft.time ? (
-              <>
-                <NativeTimePicker
-                  label="Task time"
-                  onChange={(value) =>
-                    setDraft((current) => ({
-                      ...current,
-                      time: timeKey(value),
-                    }))
-                  }
-                  value={timeDate(draft.time)}
-                />
-                <TextButton
-                  label="Remove"
-                  onPress={() =>
-                    setDraft((current) => ({ ...current, time: null }))
-                  }
-                />
-              </>
-            ) : (
-              <>
-                <Text style={[typography.body, { color: theme.colors.textSecondary }]}>No exact time</Text>
-                <TextButton
-                  label="Add time"
-                  onPress={() =>
-                    setDraft((current) => ({
-                      ...current,
-                      time: '09:00',
-                    }))
-                  }
-                />
-              </>
-            )}
-          </View>
-        </View>
+        <OptionalTimeEditor
+          onChange={(time) =>
+            setDraft((current) => ({ ...current, time }))
+          }
+          time={draft.time}
+        />
 
         <View>
           <SectionHeader>Turn this into more</SectionHeader>
@@ -348,19 +295,6 @@ export default function TaskEditorScreen() {
         ) : null}
       </NativeSheetScrollView>
     </NativeSheetScreen>
-  );
-}
-
-function TextButton({ label, onPress }: { label: string; onPress: () => void }) {
-  const { theme } = useTracky();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={({ pressed }) => ({ opacity: pressed ? 0.55 : 1 })}
-    >
-      <Text style={[typography.headline, { color: theme.colors.accent }]}>{label}</Text>
-    </Pressable>
   );
 }
 

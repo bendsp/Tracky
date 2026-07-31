@@ -16,23 +16,10 @@ import { useTracky } from '../../store/TrackyProvider';
 import { selectionHaptic } from '../../utils/haptics';
 import { ChoiceChip } from '../Form';
 import { Icon } from '../Icon';
-import { NativeTimePicker } from '../NativeControls';
 import { SectionHeader } from '../Screen';
+import { OptionalTimeEditor } from './OptionalTimeEditor';
 
 const weekdays = [1, 2, 3, 4, 5, 6, 7] as ISOWeekday[];
-
-function timeDate(value: string | null) {
-  const date = new Date();
-  const [hour, minute] = (value ?? '09:00').split(':').map(Number);
-  date.setHours(hour, minute, 0, 0);
-  return date;
-}
-
-function localTime(value: Date) {
-  return `${String(value.getHours()).padStart(2, '0')}:${String(
-    value.getMinutes(),
-  ).padStart(2, '0')}`;
-}
 
 export function ScheduleEditor({
   onChange,
@@ -50,67 +37,10 @@ export function ScheduleEditor({
 
   return (
     <>
-      <View>
-        <SectionHeader>Time</SectionHeader>
-        <View
-          style={[
-            styles.card,
-            {
-              backgroundColor: theme.colors.groupedSurface,
-              borderColor: theme.colors.border,
-            },
-          ]}
-        >
-          <View style={styles.controlRow}>
-            <View style={styles.controlCopy}>
-              <Text style={[typography.body, { color: theme.colors.text }]}>At</Text>
-              <Text
-                style={[
-                  typography.footnote,
-                  { color: theme.colors.textSecondary },
-                ]}
-              >
-                {schedule.time ? 'Orders it here and enables a local reminder' : 'No exact time'}
-              </Text>
-            </View>
-            {schedule.time ? (
-              <NativeTimePicker
-                label="Time"
-                onChange={(date) => update({ time: localTime(date) })}
-                value={timeDate(schedule.time)}
-              />
-            ) : (
-              <Pressable
-                accessibilityLabel="Add a time"
-                accessibilityRole="button"
-                onPress={() => update({ time: '09:00' })}
-                style={({ pressed }) => [
-                  styles.textButton,
-                  { opacity: pressed ? 0.55 : 1 },
-                ]}
-              >
-                <Text style={[typography.headline, { color: theme.colors.accent }]}>Add time</Text>
-              </Pressable>
-            )}
-          </View>
-          {schedule.time ? (
-            <Pressable
-              accessibilityLabel="Remove time"
-              accessibilityRole="button"
-              onPress={() => update({ time: null })}
-              style={({ pressed }) => [
-                styles.removeTime,
-                {
-                  borderTopColor: theme.colors.separator,
-                  opacity: pressed ? 0.55 : 1,
-                },
-              ]}
-            >
-              <Text style={[typography.body, { color: theme.colors.textSecondary }]}>No exact time</Text>
-            </Pressable>
-          ) : null}
-        </View>
-      </View>
+      <OptionalTimeEditor
+        onChange={(time) => update({ time })}
+        time={schedule.time}
+      />
 
       <View>
         <SectionHeader>Repeat</SectionHeader>
@@ -271,23 +201,10 @@ function StepperButton({
 }
 
 const styles = StyleSheet.create({
-  card: {
-    borderCurve: 'continuous',
-    borderRadius: radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    overflow: 'hidden',
-  },
   chips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.xs,
-  },
-  controlCopy: { flex: 1, gap: spacing.xxs },
-  controlRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    minHeight: 64,
-    paddingHorizontal: spacing.md,
   },
   intervalCard: {
     alignItems: 'center',
@@ -300,12 +217,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   intervalValue: { fontVariant: ['tabular-nums'], minWidth: 24, textAlign: 'center' },
-  removeTime: {
-    alignItems: 'center',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    minHeight: 48,
-    justifyContent: 'center',
-  },
   stepper: {
     alignItems: 'center',
     borderRadius: radius.pill,
@@ -320,6 +231,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 36,
   },
-  textButton: { paddingHorizontal: spacing.xs, paddingVertical: spacing.sm },
   weekdays: { marginTop: spacing.sm },
 });
