@@ -70,7 +70,7 @@ export function TrackerEditorForm({
         <View style={styles.iconPreviewArea}>
           <Pressable
             accessibilityHint="Opens the icon picker"
-            accessibilityLabel="Choose tracker icon"
+            accessibilityLabel="Choose habit icon"
             accessibilityRole="button"
             onPress={onChooseIcon}
             style={({ pressed }) => [
@@ -90,7 +90,7 @@ export function TrackerEditorForm({
           </Pressable>
           <View style={styles.iconMenu}>
             <GlassButton
-              accessibilityLabel="Choose tracker icon"
+              accessibilityLabel="Choose habit icon"
               compact
               icon={PencilEdit02Icon}
               onPress={onChooseIcon}

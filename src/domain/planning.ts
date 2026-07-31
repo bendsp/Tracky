@@ -429,9 +429,27 @@ export function nowLinePlacement(
   };
 }
 
-export function unfinishedTasksBefore(tasks: Task[], date: LocalDate) {
+/**
+ * How far back the "unfinished from earlier" row looks. Without a floor the
+ * count grows for as long as the app is installed, which turns one calm row
+ * into a running tally of everything never done — the exact pile collapsing it
+ * into a single row was meant to avoid.
+ */
+export const EARLIER_TASK_HORIZON_DAYS = 14;
+
+export function unfinishedTasksBefore(
+  tasks: Task[],
+  date: LocalDate,
+  horizonDays = EARLIER_TASK_HORIZON_DAYS,
+) {
+  const floor = addLocalDays(date, -Math.max(0, horizonDays));
   return tasks
-    .filter((task) => !task.completedAt && task.scheduledDate < date)
+    .filter(
+      (task) =>
+        !task.completedAt &&
+        task.scheduledDate < date &&
+        task.scheduledDate >= floor,
+    )
     .sort((left, right) => left.scheduledDate.localeCompare(right.scheduledDate));
 }
 

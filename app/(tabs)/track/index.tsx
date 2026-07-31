@@ -13,6 +13,7 @@ import { Stack, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
+  ActionSheetIOS,
   Alert,
   FlatList,
   Keyboard,
@@ -29,9 +30,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GlassButton } from '../../../src/components/GlassButton';
 import { Icon } from '../../../src/components/Icon';
-import type { NativeMenuAction } from '../../../src/components/NativeControls';
-import { DayItemRow } from '../../../src/components/planning/DayItemRow';
+import { AgendaItemRow } from '../../../src/components/planning/AgendaItemRow';
 import { DayWeekStrip } from '../../../src/components/planning/DayWeekStrip';
+import { HabitShelf } from '../../../src/components/planning/HabitShelf';
 import { SectionHeader } from '../../../src/components/Screen';
 import {
   navigationBarHeight,
@@ -45,11 +46,8 @@ import type { LocalDate, TaskDraft } from '../../../src/domain/models';
 import {
   addLocalDays,
   buildDayPlan,
-  dayPartLabels,
-  dayPlanSections,
   localDateAtNoon,
   localDaysBetween,
-  nowLinePlacement,
   partitionDayPlan,
   unfinishedTasksBefore,
   type DayPlanItem,
@@ -82,7 +80,7 @@ function dayTitle(selectedDate: LocalDate, today: LocalDate) {
 
 export default function TodayScreen() {
   const insets = useSafeAreaInsets();
-  const { now, selectedDate, selectDate, today } = useDaySelection();
+  const { selectedDate, selectDate, today } = useDaySelection();
   const { createTask, theme } = useTracky();
 
   const [windowCenter, setWindowCenter] = useState<LocalDate>(today);
@@ -228,7 +226,6 @@ export default function TodayScreen() {
           renderItem={({ item }) => (
             <DayPage
               date={item}
-              now={now}
               selected={item === selectedDate}
               today={today}
               width={width}
@@ -276,13 +273,11 @@ function WeekStrip({
 
 function DayPage({
   date,
-  now,
   selected,
   today,
   width,
 }: {
   date: LocalDate;
-  now: Date;
   selected: boolean;
   today: LocalDate;
   width: number;
@@ -298,6 +293,7 @@ function DayPage({
     setScheduleDateSkipped,
     tasks,
     theme,
+    toggleRoutineStep,
     toggleTask,
     toggleTrackerCheckIn,
     trackers,
@@ -317,8 +313,22 @@ function DayPage({
     [date, events, routineProgress, routines, tasks, trackers],
   );
   const { active, skipped } = useMemo(() => partitionDayPlan(plan), [plan]);
-  const sections = useMemo(() => dayPlanSections(active), [active]);
-  const nowLine = date === today ? nowLinePlacement(sections, now) : null;
+  const habits = useMemo(
+    () => active.filter((item) => item.kind === 'tracker'),
+    [active],
+  );
+  const agenda = useMemo(
+    () =>
+      active
+        .filter((item) => item.kind !== 'tracker')
+        .sort((left, right) => {
+          if (left.time && right.time) return left.time.localeCompare(right.time);
+          if (left.time) return -1;
+          if (right.time) return 1;
+          return left.source.createdAt.localeCompare(right.source.createdAt);
+        }),
+    [active],
+  );
   const unfinished = useMemo(
     () => (date === today ? unfinishedTasksBefore(tasks, today) : []),
     [date, tasks, today],
@@ -387,66 +397,94 @@ function DayPage({
     ]);
   };
 
-  const actionsFor = (item: DayPlanItem): NativeMenuAction[] => {
-    const edit: NativeMenuAction = {
-      id: 'edit',
-      label: 'Edit',
-      systemImage: 'pencil',
-      onPress: () => editItem(item),
-    };
-    if (item.kind === 'task') {
-      return [
-        edit,
-        {
-          id: 'delete',
-          label: 'Delete',
-          systemImage: 'trash',
-          destructive: true,
-          onPress: () =>
-            confirmDelete(item.source.name, () => deleteTask(item.source.id)),
-        },
-      ];
-    }
-    const kind = item.kind;
-    return [
-      edit,
+  const showHabitActions = (
+    habit: Extract<DayPlanItem, { kind: 'tracker' }>,
+  ) => {
+    tapHaptic();
+    ActionSheetIOS.showActionSheetWithOptions(
       {
-        id: 'toggle-skip',
-        label: item.skipped ? 'Restore This Day' : 'Skip This Day',
-        systemImage: item.skipped ? 'arrow.uturn.backward' : 'moon.zzz',
-        onPress: () =>
-          setScheduleDateSkipped(kind, item.source.id, date, !item.skipped),
+        cancelButtonIndex: 0,
+        options: ['Cancel', 'Edit Habit', 'Skip This Day'],
+        title: habit.source.name,
       },
-      ...(kind === 'routine'
-        ? [
-            {
-              id: 'delete-routine',
-              label: 'Delete Routine',
-              systemImage: 'trash' as const,
-              destructive: true,
-              onPress: () =>
-                confirmDelete(item.source.name, () =>
-                  deleteRoutine(item.source.id),
-                ),
-            },
-          ]
-        : []),
-    ];
+      (index) => {
+        if (index === 1) editItem(habit);
+        if (index === 2) {
+          setScheduleDateSkipped('tracker', habit.source.id, date, true);
+        }
+      },
+    );
   };
 
-  const renderRow = (item: DayPlanItem, divided: boolean) => (
-    <DayItemRow
-      actions={actionsFor(item)}
-      divided={divided}
+  /**
+   * Agenda actions live behind a long press rather than a trailing button. A
+   * checklist reads as a checklist only while every row is a checkmark and a
+   * name; a control on each one turns it back into a table.
+   */
+  const showActions = (item: DayPlanItem) => {
+    tapHaptic();
+    const actions: { destructive?: boolean; label: string; run: () => void }[] =
+      [{ label: 'Edit', run: () => editItem(item) }];
+
+    if (item.kind === 'task') {
+      actions.push({
+        destructive: true,
+        label: 'Delete',
+        run: () =>
+          confirmDelete(item.source.name, () => deleteTask(item.source.id)),
+      });
+    } else {
+      const kind = item.kind;
+      actions.push({
+        label: item.skipped ? 'Restore This Day' : 'Skip This Day',
+        run: () =>
+          setScheduleDateSkipped(kind, item.source.id, date, !item.skipped),
+      });
+      if (kind === 'routine') {
+        actions.push({
+          destructive: true,
+          label: 'Delete Routine',
+          run: () =>
+            confirmDelete(item.source.name, () =>
+              deleteRoutine(item.source.id),
+            ),
+        });
+      }
+    }
+
+    const destructiveIndex = actions.findIndex((action) => action.destructive);
+    ActionSheetIOS.showActionSheetWithOptions(
+      {
+        cancelButtonIndex: actions.length,
+        destructiveButtonIndex:
+          destructiveIndex === -1 ? undefined : destructiveIndex,
+        options: [...actions.map((action) => action.label), 'Cancel'],
+        title: item.source.name,
+      },
+      (index) => actions[index]?.run(),
+    );
+  };
+
+  const renderAgendaRow = (
+    item: Extract<DayPlanItem, { kind: 'routine' | 'task' }>,
+  ) => (
+    <AgendaItemRow
       item={item}
       key={item.id}
-      onComplete={() => completeItem(item)}
+      onCompleteTask={() => completeItem(item)}
+      onLongPress={() => showActions(item)}
       onOpen={() => openItem(item)}
+      onToggleRoutineStep={(stepId) => {
+        if (item.kind !== 'routine') return;
+        const result = toggleRoutineStep(item.source.id, date, stepId);
+        if (result === 'completed') successHaptic();
+        else if (result) tapHaptic();
+      }}
       theme={theme}
     />
   );
 
-  const empty = !sections.length && !skipped.length && !unfinished.length;
+  const empty = !active.length && !skipped.length && !unfinished.length;
 
   return (
     <ScrollView
@@ -459,6 +497,23 @@ function DayPage({
       importantForAccessibility={selected ? 'auto' : 'no-hide-descendants'}
       style={{ width }}
     >
+      {habits.length ? (
+        <View>
+          <SectionHeader>Habits</SectionHeader>
+          <HabitShelf
+            habits={habits}
+            onCheckIn={completeItem}
+            onEdit={editItem}
+            onLongPress={showHabitActions}
+            onOpen={openItem}
+            onSkip={(habit) =>
+              setScheduleDateSkipped('tracker', habit.source.id, date, true)
+            }
+            theme={theme}
+          />
+        </View>
+      ) : null}
+
       {unfinished.length ? (
         <Pressable
           accessibilityLabel={`${unfinished.length} unfinished ${unfinished.length === 1 ? 'task' : 'tasks'} from earlier`}
@@ -466,61 +521,37 @@ function DayPage({
           onPress={() => router.push('/earlier-tasks')}
           style={({ pressed }) => [
             styles.earlier,
-            {
-              backgroundColor: theme.colors.surface,
-              borderColor: theme.colors.border,
-              opacity: pressed ? 0.62 : 1,
-            },
+            { opacity: pressed ? 0.58 : 1 },
           ]}
         >
-          <View
+          <Text
             style={[
-              styles.earlierIcon,
-              { backgroundColor: theme.colors.surfaceMuted },
+              typography.subheadline,
+              styles.earlierCopy,
+              { color: theme.colors.textSecondary },
             ]}
           >
-            <Icon
-              color={theme.colors.textSecondary}
-              icon={Tick02Icon}
-              size={20}
-            />
-          </View>
-          <Text style={[typography.headline, { color: theme.colors.text }]}>
             {unfinished.length} unfinished from earlier
           </Text>
           <Icon
             color={theme.colors.textTertiary}
             icon={ArrowRight01Icon}
-            size={18}
+            size={16}
           />
         </Pressable>
       ) : null}
 
-      {sections.map((section) => {
-        const line = nowLine?.part === section.part ? nowLine.index : -1;
-        return (
-          <View key={section.part}>
-            <SectionHeader>{dayPartLabels[section.part]}</SectionHeader>
-            <View
-              style={[
-                styles.sectionCard,
-                {
-                  backgroundColor: theme.colors.surface,
-                  borderColor: theme.colors.border,
-                },
-              ]}
-            >
-              {section.items.map((item, index) => (
-                <View key={item.id}>
-                  {line === index ? <NowLine theme={theme} /> : null}
-                  {renderRow(item, index > 0 || line === index)}
-                </View>
-              ))}
-              {line === section.items.length ? <NowLine theme={theme} /> : null}
-            </View>
-          </View>
-        );
-      })}
+      {/*
+        One agenda, not a timed list and an untimed one. Splitting them put the
+        least urgent things under their own heading and made an empty time
+        column look like a second category.
+      */}
+      {agenda.length ? (
+        <View style={styles.section}>
+          <SectionHeader>Agenda</SectionHeader>
+          {agenda.map((item) => renderAgendaRow(item))}
+        </View>
+      ) : null}
 
       {skipped.length ? (
         <View>
@@ -548,19 +579,44 @@ function DayPage({
               {showSkipped ? 'Hide' : 'Show'}
             </Text>
           </Pressable>
-          {showSkipped ? (
-            <View
-              style={[
-                styles.sectionCard,
-                {
-                  backgroundColor: theme.colors.surface,
-                  borderColor: theme.colors.border,
-                },
-              ]}
-            >
-              {skipped.map((item, index) => renderRow(item, index > 0))}
-            </View>
-          ) : null}
+          {showSkipped
+            ? skipped.map((item) => (
+                <Pressable
+                  accessibilityHint="Restores this item for the day"
+                  accessibilityLabel={`Restore ${item.source.name} for this day`}
+                  accessibilityRole="button"
+                  key={item.id}
+                  onPress={() => {
+                    if (item.kind === 'task') return;
+                    setScheduleDateSkipped(item.kind, item.source.id, date, false);
+                    tapHaptic();
+                  }}
+                  style={({ pressed }) => [
+                    styles.skippedRow,
+                    { opacity: pressed ? 0.58 : 1 },
+                  ]}
+                >
+                  <Text
+                    numberOfLines={1}
+                    style={[
+                      typography.body,
+                      styles.skippedName,
+                      { color: theme.colors.textSecondary },
+                    ]}
+                  >
+                    {item.source.name}
+                  </Text>
+                  <Text
+                    style={[
+                      typography.footnote,
+                      { color: theme.colors.textTertiary },
+                    ]}
+                  >
+                    Restore
+                  </Text>
+                </Pressable>
+              ))
+            : null}
         </View>
       ) : null}
 
@@ -596,19 +652,6 @@ function DayPage({
         </View>
       ) : null}
     </ScrollView>
-  );
-}
-
-function NowLine({ theme }: { theme: Theme }) {
-  return (
-    <View accessibilityLabel="Now" style={styles.nowLineRow}>
-      <Text style={[typography.caption2, { color: theme.colors.textTertiary }]}>
-        Now
-      </Text>
-      <View
-        style={[styles.nowLine, { backgroundColor: theme.colors.separator }]}
-      />
-    </View>
   );
 }
 
@@ -750,21 +793,11 @@ const styles = StyleSheet.create({
   },
   earlier: {
     alignItems: 'center',
-    borderCurve: 'continuous',
-    borderRadius: radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
-    gap: spacing.sm,
-    minHeight: 62,
-    paddingHorizontal: spacing.md,
+    gap: spacing.xs,
+    minHeight: 40,
   },
-  earlierIcon: {
-    alignItems: 'center',
-    borderRadius: radius.pill,
-    height: 36,
-    justifyContent: 'center',
-    width: 36,
-  },
+  earlierCopy: { flex: 1 },
   empty: {
     alignItems: 'center',
     paddingHorizontal: spacing.xl,
@@ -781,32 +814,25 @@ const styles = StyleSheet.create({
     width: 62,
   },
   input: { flex: 1, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  nowLine: { flex: 1, height: StyleSheet.hairlineWidth },
-  nowLineRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.xs,
-    minHeight: 22,
-    paddingHorizontal: spacing.md,
-  },
   pinned: {
     paddingBottom: spacing.xs,
     paddingHorizontal: spacing.md,
     zIndex: 10,
   },
   screen: { flex: 1 },
-  sectionCard: {
-    borderCurve: 'continuous',
-    borderRadius: radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    overflow: 'hidden',
+  section: { gap: spacing.xxs },
+  skippedName: { flex: 1 },
+  skippedRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
+    minHeight: 40,
   },
   skippedToggle: {
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
     minHeight: 34,
-    paddingHorizontal: spacing.xxs,
   },
   submit: {
     alignItems: 'center',

@@ -24,17 +24,17 @@ export default function TrackerEditorScreen() {
   if (!session) {
     return (
       <NativeSheetScreen style={styles.missing}>
-        <Stack.Screen options={{ title: 'Tracker' }} />
+        <Stack.Screen options={{ title: 'Habit' }} />
         <Stack.Toolbar placement="left">
           <Stack.Toolbar.Button
-            accessibilityLabel="Close tracker editor"
+            accessibilityLabel="Close habit editor"
             icon="xmark"
             onPress={() => router.back()}
             separateBackground
           />
         </Stack.Toolbar>
         <Text style={[typography.body, { color: theme.colors.textSecondary }]}>
-          The tracker editor is no longer available.
+          The habit editor is no longer available.
         </Text>
       </NativeSheetScreen>
     );
@@ -60,12 +60,12 @@ export default function TrackerEditorScreen() {
     <NativeSheetScreen>
       <Stack.Screen
         options={{
-          title: session.trackerId ? 'Edit Tracker' : 'New Tracker',
+          title: session.trackerId ? 'Edit Habit' : 'New Habit',
         }}
       />
       <Stack.Toolbar placement="left">
         <Stack.Toolbar.Button
-          accessibilityLabel="Cancel tracker changes"
+          accessibilityLabel="Cancel habit changes"
           onPress={close}
           separateBackground
         >
@@ -74,7 +74,7 @@ export default function TrackerEditorScreen() {
       </Stack.Toolbar>
       <Stack.Toolbar placement="right">
         <Stack.Toolbar.Button
-          accessibilityLabel={session.trackerId ? 'Save tracker' : 'Add tracker'}
+          accessibilityLabel={session.trackerId ? 'Save habit' : 'Add habit'}
           disabled={!session.draft.name.trim()}
           onPress={save}
           separateBackground

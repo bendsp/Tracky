@@ -98,12 +98,12 @@ export default function TaskEditorScreen() {
   const convertToTracker = () => {
     if (!cleanName) return;
     Alert.alert(
-      'Make this repeat?',
-      'This task will become a daily tracker. You can adjust its goal and schedule afterward.',
+      'Make this a habit?',
+      'This task will become a daily habit. You can adjust its goal and schedule afterward.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Make recurring',
+          text: 'Make a habit',
           onPress: () => {
             const trackerDraft = newTrackerDraft();
             const trackerId = createTracker({
@@ -340,7 +340,7 @@ export default function TaskEditorScreen() {
           >
             <ActionRow
               disabled={!cleanName}
-              label="Make recurring"
+              label="Make a habit"
               onPress={convertToTracker}
               theme={theme}
             />

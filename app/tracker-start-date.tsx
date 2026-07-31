@@ -25,7 +25,7 @@ export default function TrackerStartDateScreen() {
       <NativeSheetScreen style={styles.missing}>
         <Stack.Screen options={{ title: 'Start Date' }} />
         <Text style={[typography.body, { color: theme.colors.textSecondary }]}>
-          The tracker editor is no longer available.
+          The habit editor is no longer available.
         </Text>
       </NativeSheetScreen>
     );

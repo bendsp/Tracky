@@ -101,7 +101,7 @@ export default function TrackerDetailSheet() {
   if (!tracker) {
     return (
       <NativeSheetScreen style={styles.missing}>
-        <Stack.Screen options={{ title: 'Tracker' }} />
+        <Stack.Screen options={{ title: 'Habit' }} />
         <Stack.Toolbar placement="left">
           <Stack.Toolbar.Button
             accessibilityLabel="Close"
@@ -111,7 +111,7 @@ export default function TrackerDetailSheet() {
           />
         </Stack.Toolbar>
         <Text style={[typography.title3, { color: theme.colors.text }]}>
-          Tracker not found
+          Habit not found
         </Text>
       </NativeSheetScreen>
     );
@@ -136,7 +136,7 @@ export default function TrackerDetailSheet() {
       <Stack.Screen options={{ title: tracker.name }} />
       <Stack.Toolbar placement="left">
         <Stack.Toolbar.Button
-          accessibilityLabel="Close tracker details"
+          accessibilityLabel="Close habit details"
           icon="xmark"
           onPress={() => router.back()}
           separateBackground

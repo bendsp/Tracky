@@ -41,7 +41,7 @@ export default function LibraryScreen() {
       <Stack.Toolbar placement="right">
         <Stack.Toolbar.Menu icon="plus" title="New">
           <Stack.Toolbar.MenuAction icon="checkmark.circle" onPress={newTracker}>
-            New Tracker
+            New Habit
           </Stack.Toolbar.MenuAction>
           <Stack.Toolbar.MenuAction
             icon="list.bullet.rectangle"
@@ -54,7 +54,7 @@ export default function LibraryScreen() {
 
       {trackers.length ? (
         <View>
-          <SectionHeader>Trackers</SectionHeader>
+          <SectionHeader>Habits</SectionHeader>
           <View
             style={[
               styles.card,
@@ -126,7 +126,7 @@ export default function LibraryScreen() {
               { color: theme.colors.textSecondary },
             ]}
           >
-            Add a tracker for something measurable, or a routine for a sequence you don’t want to hold in your head.
+            Add a habit for something you want to repeat, or a routine for a sequence you don’t want to hold in your head.
           </Text>
           <View style={styles.emptyActions}>
             <Pressable
@@ -140,7 +140,7 @@ export default function LibraryScreen() {
                 },
               ]}
             >
-              <Text style={[typography.headline, { color: theme.colors.onAccent }]}>New Tracker</Text>
+              <Text style={[typography.headline, { color: theme.colors.onAccent }]}>New Habit</Text>
             </Pressable>
             <Pressable
               accessibilityRole="button"

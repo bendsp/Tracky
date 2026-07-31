@@ -215,7 +215,7 @@ export default function OnboardingSheet() {
         </View>
 
         <Pressable
-          accessibilityHint="Opens the tracker editor"
+          accessibilityHint="Opens the habit editor"
           accessibilityLabel="Create something else"
           accessibilityRole="button"
           onPress={buildMyOwn}

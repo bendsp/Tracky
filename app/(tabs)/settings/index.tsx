@@ -416,7 +416,7 @@ export default function SettingsScreen() {
           />
           <SettingsRow
             icon={AddToListIcon}
-            label="Add starter trackers"
+            label="Add starter habits"
             onPress={() => router.push('/onboarding')}
           />
         </View>
