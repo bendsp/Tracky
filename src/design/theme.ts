@@ -57,6 +57,20 @@ export function resolveHabitColor(
     : normalized;
 }
 
+/**
+ * Ink that stays legible on top of an arbitrary habit colour. Uses perceived
+ * luminance, so mid-tones like Gold and Lime get dark ink while the rest get
+ * light.
+ */
+export function contrastingInk(hex: string) {
+  const value = Number.parseInt(hex.replace('#', ''), 16);
+  const red = (value >> 16) & 255;
+  const green = (value >> 8) & 255;
+  const blue = value & 255;
+  const luminance = (red * 299 + green * 587 + blue * 114) / 255000;
+  return luminance > 0.64 ? '#0A0A0A' : '#FFFFFF';
+}
+
 export function colorWithAlpha(hex: string, alpha: number) {
   const normalized = hex.replace('#', '');
   if (!/^[0-9A-Fa-f]{6}$/.test(normalized)) return hex;

@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 
 import {
+  contrastingInk,
   habitColors,
   radius,
   resolveHabitColor,
@@ -132,7 +133,7 @@ export function TrackerEditorForm({
                 >
                   {selected ? (
                     <Icon
-                      color={swatchForeground(swatchColor)}
+                      color={contrastingInk(swatchColor)}
                       icon={Tick02Icon}
                       size={22}
                       strokeWidth={2.5}
@@ -336,15 +337,6 @@ export function TrackerEditorForm({
         </View>
     </NativeSheetScrollView>
   );
-}
-
-function swatchForeground(hex: string) {
-  const value = Number.parseInt(hex.slice(1), 16);
-  const red = (value >> 16) & 255;
-  const green = (value >> 8) & 255;
-  const blue = value & 255;
-  const luminance = (red * 299 + green * 587 + blue * 114) / 255000;
-  return luminance > 0.64 ? '#0A0A0A' : '#FFFFFF';
 }
 
 function formattedStartDate(value: string) {

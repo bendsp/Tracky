@@ -11,11 +11,15 @@ import {
 
 const ONBOARDING_STORAGE_KEY = 'tracky.onboarding.v1';
 
+/**
+ * Tracks only whether the introduction has been seen. Presenting it is the
+ * router's job — `/onboarding` is an ordinary sheet route, so replaying it from
+ * Settings is a `push`, not a global state change.
+ */
 type OnboardingContextValue = {
   completed: boolean;
   completeOnboarding: () => Promise<void>;
   ready: boolean;
-  replayOnboarding: () => void;
 };
 
 const OnboardingContext = createContext<OnboardingContextValue | null>(null);
@@ -36,21 +40,9 @@ export function OnboardingProvider({ children }: PropsWithChildren) {
     setCompleted(true);
   }, []);
 
-  const replayOnboarding = useCallback(() => {
-    // Replaying is a transient presentation choice. Keep the durable completion
-    // marker so closing the app midway does not turn the introduction back into
-    // a required first-launch flow.
-    setCompleted(false);
-  }, []);
-
   const value = useMemo(
-    () => ({
-      completed,
-      completeOnboarding,
-      ready,
-      replayOnboarding,
-    }),
-    [completed, completeOnboarding, ready, replayOnboarding],
+    () => ({ completed, completeOnboarding, ready }),
+    [completed, completeOnboarding, ready],
   );
 
   return (

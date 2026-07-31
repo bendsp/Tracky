@@ -5,7 +5,6 @@ import type {
   ViewStyle,
 } from 'react-native';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { spacing } from '../design/theme';
 import { useTracky } from '../store/TrackyProvider';
@@ -39,12 +38,13 @@ export function NativeSheetScrollView({
   style,
   ...props
 }: PropsWithChildren<ScrollViewProps>) {
-  const insets = useSafeAreaInsets();
-
   return (
     <ScrollView
       automaticallyAdjustKeyboardInsets={automaticallyAdjustKeyboardInsets}
-      contentInsetAdjustmentBehavior="never"
+      // A form sheet's own safe-area top inset is 0, so "never" left content
+      // running underneath the sheet's navigation bar. Let iOS inset it below
+      // the bar — and above the home indicator — instead.
+      contentInsetAdjustmentBehavior="automatic"
       contentContainerStyle={styles.scrollContainer}
       keyboardDismissMode={
         automaticallyAdjustKeyboardInsets ? 'interactive' : undefined
@@ -56,19 +56,7 @@ export function NativeSheetScrollView({
       style={[styles.scroll, style]}
       {...props}
     >
-      <View
-        style={[
-          styles.scrollBody,
-          {
-            paddingBottom: Math.max(
-              spacing.xxxl,
-              insets.bottom + spacing.md,
-            ),
-            paddingTop: insets.top,
-          },
-          contentContainerStyle,
-        ]}
-      >
+      <View style={[styles.scrollBody, contentContainerStyle]}>
         {children}
       </View>
     </ScrollView>
@@ -84,6 +72,7 @@ const styles = StyleSheet.create({
   },
   scrollBody: {
     flexGrow: 1,
+    paddingBottom: spacing.xxxl,
     paddingHorizontal: spacing.lg,
   },
 });

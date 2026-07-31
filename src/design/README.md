@@ -99,7 +99,15 @@ Two constraints come with large titles:
 Header actions are `Stack.Toolbar` / `Stack.Toolbar.Button` with SF Symbol
 names — not custom views in the content area.
 
-Modals use `nativeSheetOptions`: full-height native form sheets.
+Modals use `nativeSheetOptions`: full-height native form sheets, with
+`NativeSheetScreen` / `NativeSheetScrollView` for their content.
+
+A form sheet's own safe-area **top inset is 0** — the sheet starts below the
+status bar, so `insets.top` tells you nothing about where its navigation bar
+ends. Don't reach for it. `NativeSheetScrollView` sets
+`contentInsetAdjustmentBehavior="automatic"` and lets iOS inset content below
+the bar; setting it to `"never"` puts your first element underneath the title
+and toolbar buttons.
 
 Screens inside `(tabs)` add `tabBarInset` to their scroll content padding. Don't
 hand-roll a clearance number.
